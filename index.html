@@ -768,6 +768,204 @@
     }
   }
 
+  /* Simpler mobile pass: bigger text, fewer competing details. */
+  @media (max-width:720px) {
+    header {
+      padding:12px 14px 8px;
+    }
+    h1 {
+      font-size:26px;
+    }
+    .subtitle {
+      display:none;
+    }
+    .app-tabs {
+      margin-top:8px;
+    }
+    .app-tab {
+      font-size:14px;
+      padding:9px 12px;
+    }
+    #tabHistory,
+    #tabCourses {
+      display:none;
+    }
+    .quest-shell {
+      padding:12px 12px 96px;
+    }
+    .mobile-stepper {
+      grid-template-columns:1fr 1fr;
+      margin-bottom:12px;
+    }
+    .mobile-stepper span {
+      font-size:14px;
+      padding:10px 8px;
+      border-radius:14px;
+    }
+    .mobile-stepper span:nth-child(2) {
+      display:none;
+    }
+    .quest-hero > .panel:first-child h2 {
+      font-size:22px;
+      line-height:1.2;
+    }
+    .quest-copy {
+      font-size:15px;
+      line-height:1.5;
+      color:#cbd5e1;
+    }
+    .quest-toolbar {
+      top:82px;
+      gap:8px;
+      padding:10px;
+    }
+    .quest-toolbar input[type="search"] {
+      min-height:48px;
+      font-size:16px;
+      padding:11px 12px;
+    }
+    .quest-toolbar-main button[data-route="all"] {
+      min-height:48px;
+      font-size:15px;
+      padding:9px 13px;
+    }
+    .route-strip {
+      max-height:42px;
+      overflow:hidden;
+    }
+    .route-strip button {
+      font-size:13px;
+      padding:8px 11px;
+      max-width:130px;
+    }
+    #skillButtons {
+      display:none !important;
+    }
+    .song-list {
+      gap:10px;
+    }
+    .song {
+      min-height:76px;
+      padding:13px 12px;
+      border-radius:16px;
+    }
+    .song.collapsed,
+    .song.expanded {
+      grid-template-columns:42px minmax(0,1fr);
+    }
+    .song input[type="checkbox"] {
+      width:32px;
+      height:32px;
+    }
+    .song-title-text {
+      font-size:17px;
+      line-height:1.28;
+      font-weight:850;
+      -webkit-line-clamp:2;
+    }
+    .artist-inline {
+      font-size:14px;
+      line-height:1.35;
+      margin-top:2px;
+      color:#cbd5e1;
+    }
+    .song-side {
+      gap:8px;
+      margin-top:8px;
+    }
+    .song-detail,
+    .music-links,
+    .route-badge,
+    .mini-rating {
+      display:none !important;
+    }
+    .lv {
+      font-size:14px;
+      padding:6px 10px;
+      border-radius:12px;
+    }
+    .registered-mark {
+      font-size:12px;
+      padding:3px 7px;
+    }
+    .result-panel {
+      margin-top:14px;
+      padding:14px;
+      border-radius:16px;
+    }
+    .panel-label {
+      font-size:13px;
+      margin-bottom:8px;
+    }
+    .next-card {
+      padding:14px;
+      border-radius:16px;
+    }
+    .next-card .rec {
+      padding-left:12px;
+    }
+    .next-card .rec h3 {
+      font-size:26px;
+      line-height:1.15;
+    }
+    .next-card .rec:nth-child(n+2) {
+      display:none;
+    }
+    .next-card .rec p {
+      font-size:16px;
+      line-height:1.55;
+    }
+    .next-card .rating-grid,
+    .next-card .ref-link,
+    .next-card .small,
+    .next-card .music-links {
+      display:none !important;
+    }
+    .progress-grid {
+      grid-template-columns:1fr 1fr 1fr;
+    }
+    .progress-grid .stat {
+      padding:11px 8px;
+    }
+    .progress-grid .small {
+      font-size:12px;
+    }
+    .progress-grid .num {
+      font-size:26px;
+    }
+    .chips {
+      display:none;
+    }
+    .result-panel > div:nth-child(3) {
+      display:none;
+    }
+    .detail-sections,
+    .quest-shell > section.panel,
+    .route-panel {
+      display:none;
+    }
+    .global-progress {
+      grid-template-columns:1fr;
+      padding:10px;
+      border-radius:18px;
+    }
+    .global-progress-label {
+      font-size:14px;
+      justify-content:center;
+    }
+    .global-progress #registerBtn {
+      min-height:50px;
+      width:100%;
+      font-size:16px;
+      border-radius:14px;
+    }
+    .toast {
+      font-size:15px;
+      bottom:86px;
+      padding:12px 14px;
+    }
+  }
+
 </style>
 </head>
 <body>
