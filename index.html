@@ -422,6 +422,352 @@
     .next-card .rec h3 { font-size:20px; }
   }
 
+  /* Mobile-first quest flow: pick songs, diagnose, then see the next song. */
+  .mobile-stepper { display:none; }
+  .mobile-result-anchor { scroll-margin-top:12px; }
+  @media (max-width:720px) {
+    body { background:#0b1020; }
+    header {
+      padding:16px 14px 8px;
+      border-bottom:1px solid rgba(51,65,85,.55);
+      background:rgba(11,16,32,.96);
+      position:sticky;
+      top:0;
+      z-index:60;
+      backdrop-filter:blur(12px);
+    }
+    h1 { font-size:24px; line-height:1.12; }
+    .subtitle {
+      margin-top:6px;
+      font-size:12px;
+      line-height:1.55;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+    header > .controls { display:none; }
+    .app-tabs {
+      margin-top:10px;
+      gap:6px;
+      flex-wrap:nowrap;
+      overflow:auto;
+      padding-bottom:2px;
+    }
+    .app-tab {
+      flex:0 0 auto;
+      padding:8px 10px;
+      font-size:12px;
+      border-radius:12px;
+    }
+    .dev-corner { display:none; }
+    .quest-shell {
+      padding:10px 10px 92px;
+      gap:12px;
+    }
+    .mobile-stepper {
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:6px;
+      margin:0 0 10px;
+    }
+    .mobile-stepper span {
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(15,23,42,.78);
+      color:#cbd5e1;
+      border-radius:999px;
+      padding:7px 8px;
+      font-size:11px;
+      font-weight:850;
+      text-align:center;
+      white-space:nowrap;
+    }
+    .mobile-stepper span:first-child {
+      border-color:rgba(56,189,248,.65);
+      color:#e0f2fe;
+      background:rgba(14,116,144,.22);
+    }
+    .quest-hero,
+    .detail-sections {
+      display:block;
+    }
+    .panel {
+      border-radius:14px;
+      padding:12px;
+      box-shadow:none;
+    }
+    .quest-hero > .panel:first-child {
+      padding:0;
+      border:0;
+      background:transparent;
+    }
+    .quest-hero > .panel:first-child .section-head {
+      padding:0 2px;
+      margin-bottom:8px;
+    }
+    .quest-hero > .panel:first-child h2 {
+      font-size:18px;
+    }
+    .quest-copy {
+      font-size:12px;
+      margin:4px 0 0;
+    }
+    .quest-toolbar {
+      position:sticky;
+      top:92px;
+      z-index:45;
+      margin:0 0 10px;
+      padding:10px;
+      border-radius:14px;
+      background:rgba(15,23,42,.96);
+      box-shadow:0 10px 26px rgba(0,0,0,.28);
+    }
+    .quest-toolbar-main {
+      grid-template-columns:1fr auto;
+    }
+    .quest-toolbar input[type="search"] {
+      min-height:42px;
+      font-size:14px;
+      border-radius:12px;
+    }
+    .quest-toolbar-main button[data-route="all"] {
+      min-height:42px;
+      border-radius:12px;
+      padding:8px 11px;
+    }
+    .route-strip {
+      gap:6px;
+      padding-bottom:1px;
+    }
+    .route-strip button,
+    #skillButtons button {
+      font-size:11px;
+      padding:6px 9px;
+      border-radius:999px;
+      max-width:150px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    #skillButtons {
+      max-height:none;
+      margin-top:-4px;
+    }
+    .song-list {
+      max-height:none;
+      gap:7px;
+      padding:0;
+    }
+    .song {
+      min-height:58px;
+      border-radius:14px;
+      padding:10px 10px 10px 12px;
+      background:rgba(31,41,55,.82);
+    }
+    .song.collapsed,
+    .song.expanded {
+      grid-template-columns:34px minmax(0,1fr);
+      align-items:center;
+    }
+    .song input[type="checkbox"] {
+      width:26px;
+      height:26px;
+      margin:0;
+      transform:none;
+      accent-color:#38bdf8;
+    }
+    .song-summary {
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      column-gap:6px;
+      row-gap:2px;
+    }
+    .song-summary::before,
+    .song-summary .chevron { display:none; }
+    .song-title-text {
+      font-size:14px;
+      line-height:1.25;
+      white-space:normal;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+    }
+    .artist-inline {
+      grid-column:1 / -1;
+      max-width:none;
+      font-size:11px;
+      color:#94a3b8;
+    }
+    .song-detail {
+      margin-top:6px;
+      font-size:12px;
+    }
+    .song-side {
+      grid-column:2;
+      justify-self:start;
+      display:flex !important;
+      gap:6px;
+      align-items:center;
+      margin-top:6px;
+    }
+    .song.collapsed .song-side {
+      display:flex !important;
+    }
+    .song.collapsed .song-detail {
+      display:none !important;
+    }
+    .mini-rating {
+      justify-content:flex-start;
+      margin-top:0;
+    }
+    .mini-rating span:nth-child(n+3) {
+      display:none;
+    }
+    .lv {
+      padding:4px 8px;
+      font-size:11px;
+    }
+    .registered-mark {
+      margin-left:4px;
+      padding:2px 6px;
+      font-size:10px;
+    }
+    .result-panel {
+      position:static;
+      margin-top:12px;
+      padding:12px;
+      gap:12px;
+    }
+    .panel-label {
+      font-size:11px;
+      margin-bottom:6px;
+    }
+    .next-card {
+      padding:12px;
+      border-radius:15px;
+    }
+    .next-card .rec h3 {
+      font-size:22px;
+      line-height:1.15;
+    }
+    .next-card .rec p {
+      font-size:13px;
+      line-height:1.55;
+    }
+    .next-card .rating-grid {
+      grid-template-columns:1fr;
+    }
+    .progress-grid {
+      grid-template-columns:repeat(3,1fr);
+      gap:6px;
+    }
+    .progress-grid .stat {
+      padding:9px 8px;
+      border-radius:11px;
+    }
+    .progress-grid .num {
+      font-size:22px;
+    }
+    .chips {
+      max-height:96px;
+      overflow:auto;
+    }
+    .chip {
+      padding:6px 8px;
+      font-size:11px;
+    }
+    .quest-help {
+      display:none;
+    }
+    .detail-sections,
+    .quest-shell > section.panel,
+    .route-panel {
+      margin-top:12px;
+    }
+    .detail-sections .panel + .panel {
+      margin-top:12px;
+    }
+    .detail-sections .panel,
+    .quest-shell > section.panel,
+    .route-panel {
+      background:rgba(17,24,39,.72);
+    }
+    .detail-sections h2,
+    .quest-shell > section.panel h2 {
+      font-size:16px;
+    }
+    .learned-item {
+      display:grid;
+      gap:8px;
+    }
+    .mini-bar-row {
+      grid-template-columns:1fr;
+      gap:5px;
+    }
+    .relation-item {
+      font-size:12px;
+    }
+    .route-grid {
+      grid-template-columns:1fr;
+    }
+    .global-progress {
+      left:10px;
+      right:10px;
+      bottom:10px;
+      transform:none;
+      width:auto;
+      grid-template-columns:1fr auto;
+      border-radius:16px;
+      padding:9px;
+      background:rgba(11,18,32,.96);
+    }
+    .global-progress-bar {
+      grid-column:1 / -1;
+      height:8px;
+    }
+    .global-progress-label {
+      justify-content:flex-start;
+      font-size:11px;
+    }
+    .global-progress-label span {
+      display:none;
+    }
+    .global-progress #registerBtn {
+      min-height:42px;
+      border-radius:12px;
+      padding:8px 12px;
+      font-size:13px;
+    }
+    .global-progress #clearPendingBtn {
+      display:none !important;
+    }
+    .toast {
+      width:calc(100vw - 28px);
+      text-align:center;
+      border-radius:14px;
+      bottom:76px;
+    }
+    .history-shell,
+    .course-shell {
+      padding:10px 10px 92px;
+    }
+    .course-grid {
+      gap:10px;
+    }
+    .course-card {
+      border-radius:14px;
+      padding:12px;
+    }
+    .history-wrap {
+      border-radius:14px;
+      padding:8px;
+    }
+    .history-frame {
+      min-height:620px;
+      height:78vh;
+      border-radius:10px;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -448,6 +794,11 @@
 
 
 <main id="questView" class="tab-view quest-shell">
+  <div class="mobile-stepper viewer-only" aria-label="スマホ用の進行ステップ">
+    <span>1 曲を選ぶ</span>
+    <span>2 診断</span>
+    <span>3 次の曲</span>
+  </div>
   <div class="quest-hero viewer-only">
     <section class="panel">
       <div class="section-head">
@@ -466,7 +817,7 @@
       <div id="songList" class="song-list"></div>
     </section>
 
-    <aside class="panel result-panel">
+    <aside class="panel result-panel mobile-result-anchor" id="mobileResult">
       <div>
         <div class="panel-label">NEXT QUEST</div>
         <div id="recommendations" class="recommendations next-card"></div>
@@ -937,6 +1288,14 @@ function renderPendingCount() {
   }
   if (clear) clear.style.display = pending.size ? "" : "none";
 }
+function isMobileQuestView() {
+  return window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
+}
+function scrollToMobileResult() {
+  if (!isMobileQuestView()) return;
+  const target = document.getElementById("mobileResult");
+  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 function registerPending() {
   if (!pending.size) { showToast("登録する曲にチェックを入れて"); return; }
   pending.forEach(name => selected.add(name));
@@ -944,6 +1303,7 @@ function registerPending() {
   pending.clear();
   showToast(`${n}曲を登録した`);
   renderAll();
+  scrollToMobileResult();
 }
 function clearPending() {
   pending.clear();
