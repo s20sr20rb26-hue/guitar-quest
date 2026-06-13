@@ -1,0 +1,1433 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>課題曲ツリー β 3軸評価版</title>
+<style>
+  :root {
+    --bg:#0f172a; --panel:#111827; --card:#1f2937; --card2:#172033; --muted:#94a3b8; --text:#e5e7eb;
+    --accent:#38bdf8; --accent2:#a78bfa; --line:#334155; --good:#34d399; --warn:#fbbf24; --danger:#fb7185;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:linear-gradient(135deg,#0f172a,#111827); color:var(--text); }
+  header { padding:28px 20px 16px; max-width:1180px; margin:auto; }
+  h1 { margin:0; font-size:clamp(28px,5vw,46px); letter-spacing:-.03em; }
+  .subtitle { color:var(--muted); margin-top:10px; line-height:1.7; }
+  main { max-width:1180px; margin:auto; padding:0 20px 70px; display:grid; gap:18px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width: 920px) { .grid { grid-template-columns:1fr; } }
+  .panel { background:rgba(17,24,39,.88); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:0 16px 60px rgba(0,0,0,.25); }
+  .panel h2 { margin:0 0 12px; font-size:20px; }
+  .controls { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; align-items:center; }
+  button, select, input, textarea { background:#0b1220; color:var(--text); border:1px solid var(--line); border-radius:12px; padding:9px 12px; font:inherit; }
+  input[type="search"], input[type="text"], input[type="url"], input[type="number"], textarea { width:100%; }
+  button { cursor:pointer; border-radius:999px; }
+  button.active, .primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#020617; border:0; font-weight:800; }
+  button.warn { border-color:#7c2d12; color:#fed7aa; }
+  button.danger { border-color:#7f1d1d; color:#fecdd3; }
+  .small { color:var(--muted); font-size:12px; line-height:1.5; }
+  .route-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+  .route-card { background:rgba(31,41,55,.85); border:1px solid var(--line); border-radius:14px; padding:12px; cursor:pointer; }
+  .route-card:hover { border-color:var(--accent); }
+
+  /* Genre / route color system */
+  .route-badge { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:850; border:1px solid rgba(148,163,184,.35); background:rgba(15,23,42,.8); color:#e5e7eb; white-space:nowrap; }
+  .route-badge::before { content:""; width:7px; height:7px; border-radius:999px; background:currentColor; box-shadow:0 0 12px currentColor; }
+  .route-btn { border-width:1px; }
+  .route-card { position:relative; overflow:hidden; }
+  .route-card::before { content:""; position:absolute; inset:0 auto 0 0; width:6px; background:var(--route-color,#64748b); opacity:.95; }
+  .route-card b { display:inline-flex; align-items:center; gap:8px; }
+  .route-card b::before { content:""; width:9px; height:9px; border-radius:999px; background:var(--route-color,#64748b); box-shadow:0 0 16px var(--route-color,#64748b); }
+  .song { border-left:5px solid var(--route-color,#334155); }
+  .rec { border-left:5px solid var(--route-color,#334155); }
+  .r-rock { --route-color:#38bdf8; color:#bae6fd; border-color:rgba(56,189,248,.55); background:rgba(14,116,144,.18); }
+  .r-keion { --route-color:#f9a8d4; color:#fce7f3; border-color:rgba(249,168,212,.55); background:rgba(157,23,77,.18); }
+  .r-anison { --route-color:#a78bfa; color:#ede9fe; border-color:rgba(167,139,250,.55); background:rgba(91,33,182,.18); }
+  .r-yogaku { --route-color:#60a5fa; color:#dbeafe; border-color:rgba(96,165,250,.55); background:rgba(30,64,175,.18); }
+  .r-funk { --route-color:#34d399; color:#d1fae5; border-color:rgba(52,211,153,.55); background:rgba(6,95,70,.18); }
+  .r-blues { --route-color:#f59e0b; color:#fef3c7; border-color:rgba(245,158,11,.6); background:rgba(146,64,14,.18); }
+  .r-alt { --route-color:#fb7185; color:#ffe4e6; border-color:rgba(251,113,133,.55); background:rgba(159,18,57,.18); }
+  .r-rnb { --route-color:#22d3ee; color:#cffafe; border-color:rgba(34,211,238,.55); background:rgba(21,94,117,.18); }
+  .r-loud { --route-color:#f97316; color:#ffedd5; border-color:rgba(249,115,22,.6); background:rgba(154,52,18,.2); }
+  .r-technical { --route-color:#c084fc; color:#f3e8ff; border-color:rgba(192,132,252,.55); background:rgba(107,33,168,.18); }
+  .r-other { --route-color:#94a3b8; color:#e2e8f0; border-color:rgba(148,163,184,.45); background:rgba(51,65,85,.3); }
+  .bar { height:7px; background:#0b1220; border-radius:999px; overflow:hidden; margin-top:9px; }
+  .bar span { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+  .song-list { display:grid; gap:8px; max-height:620px; overflow:auto; padding-right:4px; }
+  .song { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:start; padding:11px; background:rgba(31,41,55,.8); border:1px solid rgba(51,65,85,.9); border-radius:13px; }
+  .song input[type="checkbox"] { margin-top:4px; transform:scale(1.1); width:auto; }
+  .song-title { font-weight:750; }
+  .artist { color:#bae6fd; font-size:12px; margin-top:3px; }
+  .meta { color:var(--muted); font-size:12px; margin-top:5px; line-height:1.5; }
+  .lv { background:#0b1220; border:1px solid var(--line); color:#e0f2fe; border-radius:999px; padding:5px 9px; font-weight:800; font-size:12px; white-space:nowrap; }
+  .rating-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:8px; }
+  .rating-pill { background:rgba(15,23,42,.82); border:1px solid rgba(51,65,85,.95); border-radius:11px; padding:6px 7px; min-width:0; }
+  .rating-pill span { display:block; color:var(--muted); font-size:10px; line-height:1.1; white-space:nowrap; }
+  .rating-pill b { display:block; margin-top:3px; font-size:12px; color:#e5e7eb; white-space:nowrap; }
+  .stars { letter-spacing:-1px; color:#facc15; font-size:12px; }
+  .mini-rating { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-top:5px; }
+  .mini-rating span { border:1px solid var(--line); background:#0b1220; border-radius:999px; padding:4px 7px; font-size:11px; color:#e5e7eb; white-space:nowrap; }
+  @media (max-width: 560px) { .rating-grid { grid-template-columns:1fr; } .song { grid-template-columns:auto 1fr; } .song > .song-side { grid-column:2; justify-self:start; } }
+
+  .url-row { margin-top:8px; }
+  .url-row input { font-size:12px; padding:7px 9px; }
+  .status { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .stat { background:rgba(31,41,55,.85); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .num { font-size:30px; font-weight:900; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { background:#0b1220; border:1px solid var(--line); border-radius:999px; padding:7px 10px; font-size:12px; }
+  .chip.good { border-color:#065f46; color:#bbf7d0; }
+  .recommendations { display:grid; gap:10px; }
+  .rec { background:rgba(31,41,55,.85); border:1px solid var(--line); border-radius:15px; padding:14px; }
+  .rec-top { display:flex; justify-content:space-between; gap:10px; align-items:start; }
+  .rec h3 { margin:0 0 6px; }
+  .rec p { margin:6px 0; line-height:1.6; }
+  .ref-link { color:#7dd3fc; font-weight:700; }
+  footer { max-width:1180px; margin:0 auto; padding:0 20px 28px; color:var(--muted); }
+  .editor-only { display:none; }
+  body.editor .viewer-only { display:none !important; }
+  body.editor .editor-only { display:block; }
+  body.editor .editor-grid { display:grid; }
+  .editor-grid { display:none; grid-template-columns: repeat(12, 1fr); gap:10px; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size:11px; color:var(--muted); }
+  .span-2 { grid-column:span 2; } .span-3 { grid-column:span 3; } .span-4 { grid-column:span 4; } .span-6 { grid-column:span 6; } .span-8 { grid-column:span 8; } .span-12 { grid-column:span 12; }
+  @media (max-width: 820px) { .span-2,.span-3,.span-4,.span-6,.span-8,.span-12 { grid-column:span 12; } }
+  .edit-card { background:rgba(31,41,55,.82); border:1px solid var(--line); border-radius:16px; padding:14px; display:grid; gap:12px; }
+  .edit-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .edit-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#0b1220; border:1px solid var(--line); color:var(--text); padding:10px 14px; border-radius:999px; box-shadow:0 12px 40px rgba(0,0,0,.35); opacity:0; pointer-events:none; transition:.2s; z-index:10; }
+  .toast.show { opacity:1; }
+  .notice { border:1px solid #1e3a8a; background:rgba(30,58,138,.25); border-radius:14px; padding:12px; color:#dbeafe; line-height:1.7; }
+
+  .r-jpop { --route-color:#facc15; color:#fef9c3; border-color:rgba(250,204,21,.6); background:rgba(113,63,18,.22); }
+  .r-hougaku { --route-color:#38bdf8; color:#e0f2fe; border-color:rgba(56,189,248,.65); background:rgba(14,116,144,.22); }
+  .music-links { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .music-links a { color:#dbeafe; text-decoration:none; border:1px solid rgba(148,163,184,.35); background:#0b1220; border-radius:999px; padding:5px 8px; font-size:11px; font-weight:750; }
+  .music-links a:hover { border-color:var(--accent); color:#e0f2fe; }
+  .learned-list { display:grid; gap:8px; margin-top:10px; }
+  .learned-item { display:flex; justify-content:space-between; gap:10px; align-items:center; background:rgba(31,41,55,.75); border:1px solid var(--line); border-left:5px solid var(--route-color,#334155); border-radius:13px; padding:10px; }
+  .mini-bars { display:grid; gap:9px; margin-top:10px; }
+  .mini-bar-row { display:grid; grid-template-columns:minmax(120px,190px) 1fr auto; gap:10px; align-items:center; font-size:12px; }
+  .mini-track { height:10px; background:#0b1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .mini-fill { height:100%; background:linear-gradient(90deg,var(--route-color,#38bdf8),var(--accent2)); border-radius:999px; }
+  .relation-list { display:grid; gap:8px; margin-top:10px; }
+  .relation-item { background:rgba(31,41,55,.75); border:1px solid var(--line); border-radius:13px; padding:10px; font-size:13px; line-height:1.6; }
+  .song.registered { opacity:.72; }
+  .registered-mark { display:inline-flex; align-items:center; border:1px solid rgba(52,211,153,.55); color:#bbf7d0; background:rgba(6,95,70,.18); border-radius:999px; padding:3px 8px; font-size:11px; font-weight:800; margin-left:6px; }
+  .pending-actions { border:1px solid rgba(56,189,248,.22); background:rgba(14,116,144,.08); padding:10px; border-radius:14px; }
+  .learned-remove { border-color:#7f1d1d; color:#fecdd3; padding:6px 9px; font-size:12px; }
+
+
+  .editor-only { display:none !important; }
+
+
+  /* App tabs */
+  .app-tabs { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .app-tab { border-radius:999px; padding:10px 15px; font-weight:850; background:#0b1220; color:var(--text); border:1px solid var(--line); }
+  .app-tab.active { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#020617; border:0; }
+  .tab-view.hidden { display:none !important; }
+  .history-shell { max-width:1180px; margin:auto; padding:0 20px 70px; }
+  .history-wrap { background:rgba(17,24,39,.88); border:1px solid var(--line); border-radius:18px; padding:12px; box-shadow:0 16px 60px rgba(0,0,0,.25); }
+  .history-frame { width:100%; height:78vh; min-height:720px; border:0; border-radius:14px; background:#0b1020; display:block; }
+  .history-note { color:var(--muted); font-size:12px; line-height:1.7; margin:0 0 10px; }
+  @media (max-width: 820px) { .history-frame { height:82vh; min-height:680px; } }
+
+
+  /* Course view */
+  .course-shell { max-width:1180px; margin:auto; padding:0 20px 70px; display:grid; gap:18px; }
+  .course-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width: 980px) { .course-grid { grid-template-columns:1fr; } }
+  .course-card { background:rgba(17,24,39,.88); border:1px solid var(--line); border-radius:20px; padding:16px; box-shadow:0 16px 60px rgba(0,0,0,.22); }
+  .course-card h2 { margin:0 0 6px; font-size:22px; }
+  .course-desc { color:var(--muted); font-size:13px; line-height:1.7; min-height:44px; }
+  .course-meta { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:12px 0 8px; }
+  .course-progress { height:10px; background:#0b1220; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .course-progress span { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0%; }
+  .course-stages { display:grid; gap:8px; margin-top:12px; }
+  .course-song { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; border:1px solid rgba(51,65,85,.9); border-left:5px solid var(--route-color,#334155); background:rgba(31,41,55,.72); border-radius:13px; padding:10px; }
+  .course-song .index { width:26px; height:26px; display:grid; place-items:center; border-radius:999px; background:#0b1220; border:1px solid var(--line); font-size:12px; font-weight:900; color:#e0f2fe; }
+  .course-song.done { opacity:.78; }
+  .course-song.done .index { background:rgba(6,95,70,.45); color:#bbf7d0; border-color:#065f46; }
+  .course-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .course-next { border:1px solid rgba(56,189,248,.35); background:rgba(14,116,144,.18); color:#bae6fd; border-radius:14px; padding:10px; margin-top:12px; font-size:13px; line-height:1.6; }
+
+
+  /* Developer-only database loader */
+  #tabDatabase { display:none !important; }
+  .dev-corner {
+    position:fixed; top:10px; right:10px; z-index:50;
+    opacity:.42; transform:scale(.92); transform-origin:top right;
+  }
+  .dev-corner:hover { opacity:1; }
+  .dev-corner button {
+    padding:7px 10px; border-radius:999px; font-size:12px; font-weight:850;
+    background:rgba(15,23,42,.78); border:1px solid rgba(148,163,184,.28); color:#94a3b8;
+    box-shadow:0 10px 28px rgba(0,0,0,.22);
+  }
+  .dev-corner button:hover { color:#e5e7eb; border-color:rgba(56,189,248,.55); }
+  .database-lock-note { margin-top:10px; color:#94a3b8; font-size:12px; line-height:1.6; }
+
+
+  /* Native UX improvements: collapsible song cards, skill chips, progress bar */
+  .song-main { min-width:0; }
+  .song-summary {
+    display:flex; align-items:center; gap:6px; width:100%;
+    background:transparent !important; border:0 !important; border-radius:0 !important;
+    padding:0 !important; color:var(--text); text-align:left; font:inherit; cursor:pointer;
+  }
+  .song-summary:hover .song-title-text { color:#e0f2fe; }
+  .song-summary .chevron { color:var(--muted); font-size:11px; transition:transform .16s ease; }
+  .song.expanded .song-summary .chevron { transform:rotate(90deg); }
+  .song-title-text { font-weight:750; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .artist-inline { color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .song-detail { margin-top:7px; }
+  .song.collapsed .song-detail,
+  .song.collapsed .song-side { display:none !important; }
+  .song.collapsed { grid-template-columns:auto minmax(0,1fr); align-items:center; }
+  .song.expanded { grid-template-columns:auto minmax(0,1fr) auto; }
+  #skillButtons { max-height:118px; overflow:auto; padding-bottom:2px; }
+  #skillButtons button { font-size:12px; padding:7px 10px; }
+  .global-progress {
+    position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+    width:min(680px,calc(100vw - 28px)); z-index:55;
+    background:rgba(11,18,32,.92); border:1px solid rgba(51,65,85,.95);
+    border-radius:999px; box-shadow:0 14px 42px rgba(0,0,0,.35);
+    overflow:hidden; backdrop-filter:blur(10px);
+  }
+  .global-progress-bar { height:14px; background:#0b1220; position:relative; }
+  .global-progress-fill { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:999px; transition:width .25s ease; }
+  .global-progress-label {
+    display:flex; justify-content:center; gap:12px; align-items:center;
+    padding:5px 10px 6px; font-size:11px; color:var(--text);
+  }
+
+  /* Stronger route colors for collapsed cards */
+  .song {
+    position:relative;
+    overflow:hidden;
+    border-left:0 !important;
+  }
+  .song::before {
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:6px;
+    background:var(--route-color,#64748b);
+    box-shadow:0 0 18px var(--route-color,#64748b);
+    opacity:.95;
+  }
+  .song-summary::before {
+    content:"";
+    flex:0 0 auto;
+    width:9px;
+    height:9px;
+    border-radius:999px;
+    background:var(--route-color,#64748b);
+    box-shadow:0 0 14px var(--route-color,#64748b);
+    margin-left:2px;
+  }
+  .song-main { padding-left:2px; }
+  .song.collapsed {
+    border-color:color-mix(in srgb, var(--route-color,#64748b) 48%, #334155) !important;
+  }
+
+  @media (max-width:560px) {
+    .song.collapsed, .song.expanded { grid-template-columns:auto minmax(0,1fr); }
+    .song.expanded .song-side { grid-column:2; justify-self:start; }
+    .artist-inline { max-width:42vw; }
+  }
+
+  /* Quest-first UX refresh */
+  header { padding-bottom:10px; }
+  .subtitle { max-width:760px; }
+  .quest-shell { padding-top:8px; }
+  .quest-hero {
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);
+    gap:18px;
+    align-items:start;
+  }
+  .quest-toolbar {
+    position:sticky;
+    top:0;
+    z-index:20;
+    display:grid;
+    gap:10px;
+    background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.88));
+    border:1px solid rgba(51,65,85,.85);
+    border-radius:16px;
+    padding:12px;
+    margin-bottom:12px;
+    box-shadow:0 14px 42px rgba(0,0,0,.22);
+    backdrop-filter:blur(12px);
+  }
+  .quest-toolbar-main {
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:10px;
+    align-items:center;
+  }
+  .quest-toolbar input[type="search"] {
+    min-height:44px;
+    border-radius:13px;
+    background:#070d19;
+  }
+  .route-strip,
+  #skillButtons {
+    display:flex;
+    gap:8px;
+    overflow:auto;
+    flex-wrap:nowrap;
+    margin:0;
+    padding:1px 0 3px;
+    scrollbar-width:thin;
+  }
+  .route-strip button,
+  #skillButtons button {
+    flex:0 0 auto;
+    padding:7px 10px;
+    font-size:12px;
+  }
+  .quest-help {
+    border:1px solid rgba(56,189,248,.22);
+    background:rgba(14,116,144,.1);
+    color:#dbeafe;
+    border-radius:14px;
+    padding:10px 12px;
+    font-size:13px;
+    line-height:1.55;
+  }
+  .quest-copy {
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.65;
+    margin:0 0 12px;
+  }
+  .result-panel {
+    position:sticky;
+    top:12px;
+    display:grid;
+    gap:14px;
+  }
+  .next-card {
+    background:linear-gradient(180deg,rgba(14,116,144,.2),rgba(31,41,55,.86));
+    border:1px solid rgba(56,189,248,.42);
+    border-radius:18px;
+    padding:16px;
+    box-shadow:0 18px 52px rgba(2,6,23,.32);
+  }
+  .next-card .rec {
+    background:transparent;
+    border:0;
+    border-left:5px solid var(--route-color,#38bdf8);
+    border-radius:12px;
+    padding:4px 0 4px 12px;
+    box-shadow:none;
+  }
+  .next-card .rec h3 { font-size:24px; margin-bottom:4px; }
+  .next-card .rec + .rec { margin-top:12px; padding-top:12px; border-top:1px solid rgba(148,163,184,.18); }
+  .next-card .rec:nth-child(n+2) h3 { font-size:16px; }
+  .panel-label {
+    color:#bae6fd;
+    font-size:12px;
+    font-weight:900;
+    letter-spacing:.04em;
+    margin-bottom:8px;
+  }
+  .progress-grid {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:9px;
+  }
+  .progress-grid .stat {
+    padding:12px;
+    border-radius:12px;
+  }
+  .progress-grid .num { font-size:26px; }
+  .detail-sections {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+  }
+  .section-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+  }
+  .section-head h2,
+  .section-head h3 { margin:0; }
+  .route-panel { margin-top:18px; }
+  .route-panel summary {
+    cursor:pointer;
+    color:#dbeafe;
+    font-weight:850;
+    list-style:none;
+  }
+  .route-panel summary::-webkit-details-marker { display:none; }
+  .route-panel summary::after {
+    content:"開く";
+    float:right;
+    color:var(--muted);
+    font-size:12px;
+    font-weight:700;
+  }
+  .route-panel[open] summary::after { content:"閉じる"; }
+  .global-progress {
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    align-items:center;
+    gap:10px;
+    border-radius:18px;
+    padding:10px;
+  }
+  .global-progress-bar { height:10px; border-radius:999px; overflow:hidden; }
+  .global-progress-label {
+    justify-content:flex-start;
+    padding:0;
+    min-width:150px;
+  }
+  .global-progress .primary {
+    min-height:40px;
+    white-space:nowrap;
+  }
+  .global-progress .primary:disabled {
+    cursor:not-allowed;
+    opacity:.5;
+    background:#1f2937;
+    color:#94a3b8;
+    border:1px solid var(--line);
+  }
+  .song-list {
+    max-height:min(68vh,720px);
+  }
+  @media (max-width: 980px) {
+    .quest-hero,
+    .detail-sections { grid-template-columns:1fr; }
+    .result-panel { position:static; }
+  }
+  @media (max-width: 620px) {
+    header { padding:20px 14px 10px; }
+    main { padding-left:14px; padding-right:14px; }
+    .quest-toolbar { top:0; border-radius:14px; }
+    .quest-toolbar-main,
+    .global-progress { grid-template-columns:1fr; }
+    .global-progress-label { min-width:0; justify-content:center; }
+    .progress-grid { grid-template-columns:1fr 1fr 1fr; }
+    .next-card .rec h3 { font-size:20px; }
+  }
+
+</style>
+</head>
+<body>
+<header>
+  <h1>課題曲ツリー β</h1>
+  <div class="subtitle">
+    弾ける曲を選ぶ → 習得スキルを可視化 → 次の課題曲を出す。<br>
+    チェックした曲を登録すると、習得スキルと次のおすすめ曲が表示されます。軽音部内テスト用のフィードバック版。
+  </div>
+  <div class="controls">
+    <span class="chip good">軽音部フィードバック版</span><span class="chip good">邦ロック定番 実装済み</span>
+    <span class="small">まずは弾ける曲にチェック → 「チェックした曲を登録」を押してみてください。</span>
+  </div>
+  <div class="app-tabs" role="tablist" aria-label="表示切り替え">
+    <button id="tabQuest" class="app-tab active" type="button">課題曲ツリー</button>
+    <button id="tabCourses" class="app-tab" type="button">コース</button>
+    <button id="tabDatabase" class="app-tab" type="button">データ読み込み</button>
+    <button id="tabHistory" class="app-tab" type="button">作者の成長例</button>
+  </div>
+</header>
+<div class="dev-corner" aria-label="開発者メニュー">
+  <button id="developerDbBtn" type="button" title="開発者メニュー">⚙ DB</button>
+</div>
+
+
+<main id="questView" class="tab-view quest-shell">
+  <div class="quest-hero viewer-only">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>弾ける曲を選ぶ</h2>
+          <p class="quest-copy">知っている曲を検索してチェック。登録すると、右側に次の課題曲がすぐ出ます。</p>
+        </div>
+      </div>
+      <div class="quest-toolbar">
+        <div class="quest-toolbar-main">
+          <input id="search" type="search" placeholder="曲名・アーティスト・スキルで検索">
+          <button class="active" data-route="all">全部</button>
+        </div>
+        <div class="route-strip" id="routeButtons" aria-label="ルートで絞り込み"></div>
+      </div>
+      <div id="songList" class="song-list"></div>
+    </section>
+
+    <aside class="panel result-panel">
+      <div>
+        <div class="panel-label">NEXT QUEST</div>
+        <div id="recommendations" class="recommendations next-card"></div>
+      </div>
+      <div>
+        <div class="section-head">
+          <h2>いまの進捗</h2>
+        </div>
+        <div class="status progress-grid">
+          <div class="stat"><div class="small">登録曲</div><div class="num" id="countSongs">0</div></div>
+          <div class="stat"><div class="small">最大難易度</div><div class="num" id="maxLv">-</div></div>
+          <div class="stat"><div class="small">スキル</div><div class="num" id="countSkills">0</div></div>
+        </div>
+      </div>
+      <div>
+        <div style="margin:0 0 8px;font-weight:800;">習得スキル</div>
+        <div id="skills" class="chips"></div>
+      </div>
+      <div class="quest-help">
+        違和感があったら「難易度」「おすすめ曲」「ジャンル」「説明文」のどこが変かだけメモすればOK。
+      </div>
+    </aside>
+  </div>
+
+  <div class="detail-sections viewer-only">
+    <section class="panel">
+      <div class="section-head"><h2>弾けるようになった曲</h2></div>
+      <div id="learnedSongs" class="learned-list"></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><h2>ジャンル別の習得状況</h2></div>
+      <div id="genreStats" class="mini-bars"></div>
+    </section>
+  </div>
+
+  <section class="panel viewer-only">
+    <div class="section-head"><h2>曲同士の関連</h2></div>
+    <div id="songRelations" class="relation-list"></div>
+  </section>
+
+  <details class="panel route-panel viewer-only">
+    <summary>ルート一覧</summary>
+    <div id="routeCards" class="route-grid" style="margin-top:12px;"></div>
+  </details>
+
+</main>
+
+<section id="databaseView" class="tab-view course-shell hidden" aria-label="データ読み込み">
+  <section class="panel">
+    <h2>データベース読み込み</h2>
+    <div class="database-lock-note">この画面は開発者コード入力後だけ開けます。</div>
+    <div class="notice">
+      曲データを <b>JSON</b> または <b>CSV</b> で読み込むと、このアプリの見た目のまま課題曲ツリー・コース・おすすめ表示に反映できます。<br>
+      まずは下の「現在のDBを書き出す」でテンプレを作って、それを編集してから読み込ませるのが安全。
+    </div>
+    <div class="controls">
+      <input id="dbFileInput" type="file" accept=".json,.csv,application/json,text/csv">
+      <button id="importDbBtn" class="primary" type="button">DBを読み込む</button>
+      <button id="downloadDbJsonBtn" type="button">現在のDB JSON</button>
+      <button id="downloadDbCsvBtn" type="button">現在のDB CSV</button>
+      <button id="resetDbBtn" class="danger" type="button">初期DBに戻す</button>
+    </div>
+    <div class="small">対応列：曲名 / アーティスト / 演奏難易度 / エチュード適性 / ジャンル定番度 / 推奨ルート / 主スキル / 必須スキル / 習得スキル / 壁 / 次候補 / 一言説明 / 練習ポイント / 参考動画URL</div>
+  </section>
+
+  <section class="panel">
+    <h2>読み込み中のDB</h2>
+    <div class="status">
+      <div class="stat"><div class="small">登録曲数</div><div class="num" id="dbSongCount">0</div></div>
+      <div class="stat"><div class="small">ルート数</div><div class="num" id="dbRouteCount">0</div></div>
+      <div class="stat"><div class="small">最大難易度</div><div class="num" id="dbMaxLv">-</div></div>
+    </div>
+    <div style="margin:20px 0 8px;font-weight:800;">ルート別曲数</div>
+    <div id="dbRouteStats" class="mini-bars"></div>
+  </section>
+</section>
+
+<section id="courseView" class="tab-view course-shell hidden" aria-label="コース">
+  <section class="panel">
+    <h2>コース</h2>
+    <div class="notice">
+      ジャンル検索とは別に、<b>目的別・実体験別</b>の順番で課題曲を追えるモード。
+      登録済みの曲は進捗に反映されます。「ミーヤが通った上達コース」は、作者本人の習得順をアプリ用に整理したロードマップです。
+    </div>
+  </section>
+  <div id="courseCards" class="course-grid"></div>
+</section>
+
+<section id="historyView" class="tab-view history-shell hidden" aria-label="ギター習得史">
+  <div class="history-wrap">
+    <p class="history-note">作者本人のギター習得の流れを、年表・ルート・転機として見られるページ。下の枠内をスクロールできます。</p>
+    <iframe class="history-frame" title="ギター習得史" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;ja&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;
+&lt;title&gt;ギター習得史 / Guitar Growth Timeline&lt;/title&gt;
+&lt;style&gt;
+:root{
+  --bg:#0b1020;--panel:#111827;--card:#172033;--card2:#1f2937;--line:#334155;--text:#e5e7eb;--muted:#94a3b8;
+  --sky:#38bdf8;--violet:#a78bfa;--pink:#f9a8d4;--green:#34d399;--orange:#f59e0b;--red:#fb7185;--cyan:#22d3ee;--yellow:#facc15;
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif;background:radial-gradient(circle at top left,rgba(56,189,248,.16),transparent 32%),radial-gradient(circle at top right,rgba(167,139,250,.15),transparent 30%),linear-gradient(135deg,#0b1020,#111827 55%,#0f172a);color:var(--text)}
+header{max-width:1180px;margin:auto;padding:34px 20px 18px}.eyebrow{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(56,189,248,.35);background:rgba(14,116,144,.18);color:#bae6fd;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800}.eyebrow:before{content:&quot;&quot;;width:8px;height:8px;background:var(--sky);border-radius:99px;box-shadow:0 0 18px var(--sky)}h1{font-size:clamp(34px,6vw,66px);line-height:.98;letter-spacing:-.055em;margin:18px 0 12px}.subtitle{max-width:820px;color:var(--muted);line-height:1.8;font-size:15px}.hero-grid{max-width:1180px;margin:0 auto;padding:0 20px 18px;display:grid;grid-template-columns:1.25fr .75fr;gap:18px}@media(max-width:900px){.hero-grid{grid-template-columns:1fr}}.panel{background:rgba(17,24,39,.86);border:1px solid rgba(51,65,85,.92);border-radius:22px;padding:18px;box-shadow:0 20px 70px rgba(0,0,0,.28);backdrop-filter:blur(10px)}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}@media(max-width:720px){.stat-grid{grid-template-columns:repeat(2,1fr)}}.stat{background:rgba(31,41,55,.78);border:1px solid var(--line);border-radius:16px;padding:14px}.stat b{font-size:31px;display:block;letter-spacing:-.03em}.stat span{color:var(--muted);font-size:12px}.core-flow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.node{border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.72);border-radius:999px;padding:8px 11px;font-size:12px;font-weight:800}.node.sky{color:#bae6fd;border-color:rgba(56,189,248,.45);background:rgba(14,116,144,.15)}.node.pink{color:#fce7f3;border-color:rgba(249,168,212,.45);background:rgba(157,23,77,.15)}.node.green{color:#d1fae5;border-color:rgba(52,211,153,.45);background:rgba(6,95,70,.15)}.node.orange{color:#fef3c7;border-color:rgba(245,158,11,.45);background:rgba(146,64,14,.15)}.node.violet{color:#ede9fe;border-color:rgba(167,139,250,.45);background:rgba(91,33,182,.15)}.node.red{color:#ffe4e6;border-color:rgba(251,113,133,.45);background:rgba(159,18,57,.15)}.tabs{max-width:1180px;margin:0 auto;padding:0 20px 8px;display:flex;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:linear-gradient(180deg,rgba(11,16,32,.98),rgba(11,16,32,.78));backdrop-filter:blur(10px);border-bottom:1px solid rgba(51,65,85,.45)}.tabs a{color:var(--text);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:9px 12px;background:rgba(15,23,42,.75);font-size:13px;font-weight:800}.tabs a:hover{border-color:var(--sky);color:#bae6fd}main{max-width:1180px;margin:auto;padding:10px 20px 70px;display:grid;gap:18px}.section-title{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:12px}h2{font-size:24px;margin:0;letter-spacing:-.03em}.small{color:var(--muted);font-size:12px;line-height:1.6}.timeline{position:relative;display:grid;gap:14px}.timeline:before{content:&quot;&quot;;position:absolute;left:22px;top:0;bottom:0;width:2px;background:linear-gradient(var(--sky),var(--violet),var(--green),var(--orange));opacity:.45}.year-card{position:relative;margin-left:54px;background:rgba(31,41,55,.78);border:1px solid var(--line);border-radius:20px;padding:16px}.year-card:before{content:&quot;&quot;;position:absolute;left:-42px;top:21px;width:14px;height:14px;border-radius:99px;background:var(--dot,var(--sky));box-shadow:0 0 0 7px rgba(56,189,248,.08),0 0 24px var(--dot,var(--sky))}.year-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:8px}.year{font-size:23px;font-weight:950;letter-spacing:-.03em}.stage{color:var(--muted);font-size:13px;margin-top:3px}.badge{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;border:1px solid rgba(148,163,184,.3);white-space:nowrap}.b-sky{color:#bae6fd;background:rgba(14,116,144,.18);border-color:rgba(56,189,248,.4)}.b-pink{color:#fce7f3;background:rgba(157,23,77,.18);border-color:rgba(249,168,212,.4)}.b-green{color:#d1fae5;background:rgba(6,95,70,.18);border-color:rgba(52,211,153,.4)}.b-orange{color:#fef3c7;background:rgba(146,64,14,.18);border-color:rgba(245,158,11,.45)}.b-violet{color:#ede9fe;background:rgba(91,33,182,.18);border-color:rgba(167,139,250,.4)}.b-red{color:#ffe4e6;background:rgba(159,18,57,.18);border-color:rgba(251,113,133,.4)}.songs{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.song{font-size:12px;border:1px solid rgba(148,163,184,.22);background:rgba(15,23,42,.55);border-radius:999px;padding:6px 9px}.skills{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:12px}@media(max-width:720px){.skills{grid-template-columns:1fr}.year-card{margin-left:38px}.timeline:before{left:15px}.year-card:before{left:-31px}}.skillbox{border:1px solid rgba(51,65,85,.9);border-radius:14px;background:rgba(15,23,42,.55);padding:10px}.skillbox b{font-size:13px}.skillbox div{color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}.route-map{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}@media(max-width:900px){.route-map{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.route-map{grid-template-columns:1fr}}.route{background:rgba(31,41,55,.78);border:1px solid var(--line);border-left:5px solid var(--c,var(--sky));border-radius:18px;padding:14px}.route h3{margin:0 0 8px;font-size:16px}.route p{margin:0;color:var(--muted);font-size:12px;line-height:1.7}.barline{height:8px;background:#0b1220;border-radius:999px;overflow:hidden;margin:10px 0}.barline span{display:block;height:100%;width:var(--w,50%);background:linear-gradient(90deg,var(--c,var(--sky)),rgba(255,255,255,.65));border-radius:999px}.turning{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:900px){.turning{grid-template-columns:1fr}}.turn{background:rgba(31,41,55,.78);border:1px solid var(--line);border-radius:18px;padding:15px}.turn .num{font-size:30px;font-weight:950;color:var(--c,var(--sky))}.turn h3{margin:4px 0 8px}.turn p{margin:0;color:var(--muted);line-height:1.7;font-size:13px}.matrix{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}.cell{background:rgba(31,41,55,.88);padding:12px;font-size:12px;line-height:1.5}.cell.head{background:rgba(15,23,42,.9);font-weight:900;color:#dbeafe}.cell.muted{color:var(--muted)}@media(max-width:720px){.matrix{grid-template-columns:1fr}.cell.head:not(:first-child){display:none}}.footer-note{color:var(--muted);text-align:center;font-size:12px;margin-top:10px}.print-btn{border:0;background:linear-gradient(135deg,var(--sky),var(--violet));color:#020617;border-radius:999px;padding:10px 14px;font-weight:900;cursor:pointer}@media print{body{background:white;color:#111827}.tabs,.print-btn{display:none}.panel,.year-card,.route,.turn,.stat{box-shadow:none;background:white;color:#111827}.subtitle,.small,.stage,.skillbox div,.route p,.turn p,.cell.muted{color:#475569}.song,.node,.badge{color:#111827;background:#f8fafc}.timeline:before{background:#94a3b8} }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;header&gt;
+  &lt;div class=&quot;eyebrow&quot;&gt;Guitar growth visualization&lt;/div&gt;
+  &lt;h1&gt;ギター習得史&lt;br&gt;8年分の「上達ルート」&lt;/h1&gt;
+  &lt;div class=&quot;subtitle&quot;&gt;中学のパワーコード入門から、大学軽音でのアンサンブル、東京事変・R&amp;B・フュージョン・セッション方面まで。曲をただ並べるんじゃなく、何が武器として増えていったかを見える形にしたもの。&lt;/div&gt;
+&lt;/header&gt;
+&lt;section class=&quot;hero-grid&quot;&gt;
+  &lt;div class=&quot;panel&quot;&gt;
+    &lt;div class=&quot;section-title&quot;&gt;&lt;h2&gt;習得の大きな流れ&lt;/h2&gt;&lt;button class=&quot;print-btn&quot; onclick=&quot;window.print()&quot;&gt;印刷 / PDF化&lt;/button&gt;&lt;/div&gt;
+    &lt;div class=&quot;core-flow&quot;&gt;
+      &lt;span class=&quot;node sky&quot;&gt;パワーコード&lt;/span&gt;&lt;span class=&quot;node sky&quot;&gt;低音リフ&lt;/span&gt;&lt;span class=&quot;node pink&quot;&gt;けいおん系バンド曲&lt;/span&gt;&lt;span class=&quot;node green&quot;&gt;カッティング&lt;/span&gt;&lt;span class=&quot;node violet&quot;&gt;高速リフ&lt;/span&gt;&lt;span class=&quot;node red&quot;&gt;事変/オルタナ&lt;/span&gt;&lt;span class=&quot;node orange&quot;&gt;ブルース&lt;/span&gt;&lt;span class=&quot;node green&quot;&gt;R&amp;B/セッション&lt;/span&gt;&lt;span class=&quot;node violet&quot;&gt;フュージョン/制作&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;small&quot; style=&quot;margin-top:14px&quot;&gt;最初は「コードを押さえて鳴らす」よりも、リフ・右手・ミュートで曲を成立させる方向に伸びている。その後、大学軽音でコードワーク、アンサンブル、セッション力が一気に増えたタイプ。&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;panel&quot;&gt;
+    &lt;div class=&quot;stat-grid&quot;&gt;
+      &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;8&lt;/b&gt;&lt;span&gt;年分の流れ&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;90+&lt;/b&gt;&lt;span&gt;コピー/演奏曲&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;9&lt;/b&gt;&lt;span&gt;主なジャンル軸&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;3&lt;/b&gt;&lt;span&gt;大きな転機&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;nav class=&quot;tabs&quot;&gt;&lt;a href=&quot;#timeline&quot;&gt;年表&lt;/a&gt;&lt;a href=&quot;#routes&quot;&gt;習得ルート&lt;/a&gt;&lt;a href=&quot;#turning&quot;&gt;転機&lt;/a&gt;&lt;a href=&quot;#matrix&quot;&gt;スキル変化&lt;/a&gt;&lt;/nav&gt;
+&lt;main&gt;
+&lt;section id=&quot;timeline&quot; class=&quot;panel&quot;&gt;
+  &lt;div class=&quot;section-title&quot;&gt;&lt;h2&gt;年表で見る&lt;/h2&gt;&lt;div class=&quot;small&quot;&gt;曲数は代表曲ベース。あとから追加・修正しやすい構成。&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;timeline&quot;&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#38bdf8&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;1年目 / 中2冬〜中3&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;入口：パワーコード、低音リフ、けいおん、ロックの基礎体力&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-sky&quot;&gt;Beginner Rock&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;Deeper Deeper&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Don&#x27;t Say Lazy&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;20th Century Boy&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;曇天&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Smells Like Teen Spirit&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;American Idiot&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;完全感覚Dreamer&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Day Tripper&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;God Knows...リフ&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;パワーコード、8ビート、低音リフ、オクターブ、簡単な単音リフ&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;当時の壁&lt;/b&gt;&lt;div&gt;右手の安定、曲を最後まで通す体力、ノイズ処理&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#a78bfa&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;2年目 / 高1&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;軽音部入部：バンドで合わせる、ラウド/アニソン/ボカロへ広がる&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-violet&quot;&gt;Band Start&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;Daddy, Brother, Lover, Little Boy&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Killing In The Name&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;夜咄ディセイブ&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;ロストワンの号哭&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;天ノ弱&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;R&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;少女S&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;夜に駆ける&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;紅蓮華&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;ドロップD、深い歪み、ブリッジミュート、高速リフ、アニソン系キメ&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;変化&lt;/b&gt;&lt;div&gt;一人で弾ける曲から、バンドで成立する曲へ意識が移る&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#fb7185&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;3年目 / 高2&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;オルタナ/事変/カッティング方面へ。音作りとリズムの個性が増える&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-red&quot;&gt;Alt / Cutting&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;テレキャスターストライプ&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;群青日和&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;警告&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;NIPPON&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;じょいふる&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;閃光少女&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;PEDRO 東京&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Honnoji&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;TATTOOあり&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;コードカッティング、オルタナリフ、キメ、邦ロックの勢い&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;変化&lt;/b&gt;&lt;div&gt;単に弾くより「ノリ」「音色」「バンドの中の役割」が重要になる&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#34d399&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;4年目 / 高3&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;歌もの・ポップスバッキング。支えるギターが育つ&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-green&quot;&gt;Pop Backing&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;笑ってたいんだ&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;ホットミルク&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;自由へ道連れ&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;ダイヤモンド&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;colors&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;ワールドイズマイン&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;ファイナルボーイフレンド&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;再生&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;歌伴、コードチェンジ、展開の作り方、バッキングの安定&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;変化&lt;/b&gt;&lt;div&gt;リフで目立つだけでなく、曲全体を支える方向に進化&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#f9a8d4&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;5年目 / 大1&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;大学軽音Session入部。オリジナル、けいおん再接続、アンサンブル経験&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-pink&quot;&gt;Session Entry&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;タイムマシンにお願い&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;デリヘル呼んだら君がきた&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;GO! GO! MANIAC&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;カレーのちライス&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;キャンディハウス&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;First Good Bye&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;オリジナルバンド&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;大学軽音の現場力、ライブ対応、曲数対応、アンサンブル&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;変化&lt;/b&gt;&lt;div&gt;コピー経験が「人と合わせる力」に変換され始める&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#f59e0b&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;6年目 / 大2&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;ブルース、R&amp;B、東京事変、歌伴。語彙が一気に広がる&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-orange&quot;&gt;R&amp;B / Blues&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;Catfish Blues&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Don&#x27;t Stop Me Now&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;本音&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;修羅場&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;If I Ain&#x27;t Got You&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Just The Two Of Us&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Isn&#x27;t She Lovely&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;透明人間&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;OSCA&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;電波通信&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;ブルースフレーズ、テンションコード、R&amp;B歌伴、事変系コードワーク&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;変化&lt;/b&gt;&lt;div&gt;ロックギターから、コード/ニュアンス/セッション寄りのギターへ拡張&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#22d3ee&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;7年目 / 大3&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;テクニカル/フュージョン/東方。難曲対応とリード表現&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-violet&quot;&gt;Technical&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;Lost My Music&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Lunch Time&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;白玉楼階段の幻闘&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Säkkijärven Polkka&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Green-Tinted Sixties Mind&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;Cosmic Sans&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;デリヘル ソロ&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増えた武器&lt;/b&gt;&lt;div&gt;高速フレーズ、フュージョンカッティング、ジャズロック、アドリブ入口&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;変化&lt;/b&gt;&lt;div&gt;曲の難しさだけでなく、音価・ニュアンス・即興性が課題になる&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+    &lt;article class=&quot;year-card&quot; style=&quot;--dot:#c084fc&quot;&gt;&lt;div class=&quot;year-head&quot;&gt;&lt;div&gt;&lt;div class=&quot;year&quot;&gt;8年目 / 大4予定&lt;/div&gt;&lt;div class=&quot;stage&quot;&gt;制作・アレンジ・宝島。演奏者から作る側へ&lt;/div&gt;&lt;/div&gt;&lt;span class=&quot;badge b-violet&quot;&gt;Create&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;songs&quot;&gt;&lt;span class=&quot;song&quot;&gt;宝島&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;キーボードソロのコピー&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;DTM&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;ホーンアレンジ&lt;/span&gt;&lt;span class=&quot;song&quot;&gt;音楽制作&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;skills&quot;&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;増える予定の武器&lt;/b&gt;&lt;div&gt;アレンジ、耳コピ、DTM、ホーンセクション、作曲/制作視点&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;skillbox&quot;&gt;&lt;b&gt;次の変化&lt;/b&gt;&lt;div&gt;「弾ける」から「曲を設計できる」へ&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;/article&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;section id=&quot;routes&quot; class=&quot;panel&quot;&gt;&lt;div class=&quot;section-title&quot;&gt;&lt;h2&gt;習得ルートとして見る&lt;/h2&gt;&lt;div class=&quot;small&quot;&gt;課題曲ツリーアプリにもそのまま使える分類。&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;route-map&quot;&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#38bdf8&quot;&gt;&lt;h3&gt;初心者ロック&lt;/h3&gt;&lt;p&gt;パワーコード、8ビート、ブリッジミュート。ギターを始めた頃の主軸。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:90%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#f9a8d4&quot;&gt;&lt;h3&gt;けいおん/アニソン&lt;/h3&gt;&lt;p&gt;バンドで弾きたい動機と、リフ・コード・疾走感の実践教材。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:82%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#34d399&quot;&gt;&lt;h3&gt;カッティング/ファンク&lt;/h3&gt;&lt;p&gt;右手と左手ミュートの同期。軽音で一気に上手く見える領域。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:68%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#fb7185&quot;&gt;&lt;h3&gt;東京事変/オルタナ&lt;/h3&gt;&lt;p&gt;コード感、キメ、音作り、アンサンブル。大学軽音で強く伸びた軸。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:78%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#f59e0b&quot;&gt;&lt;h3&gt;ブルース&lt;/h3&gt;&lt;p&gt;ペンタ、チョーキング、間、ニュアンス。リードの語彙が増える。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:58%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#22d3ee&quot;&gt;&lt;h3&gt;R&amp;B/セッション&lt;/h3&gt;&lt;p&gt;テンションコード、歌伴、グルーヴ。人と合わせる力に直結。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:63%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#60a5fa&quot;&gt;&lt;h3&gt;洋楽ロック&lt;/h3&gt;&lt;p&gt;AC/DC、Queen、MR. BIG。リフとソロの王道ロック文脈。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:70%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;route&quot; style=&quot;--c:#c084fc&quot;&gt;&lt;h3&gt;テクニカル/フュージョン&lt;/h3&gt;&lt;p&gt;速弾き・フュージョン・アドリブ・制作方面への橋渡し。&lt;/p&gt;&lt;div class=&quot;barline&quot;&gt;&lt;span style=&quot;--w:55%&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;&lt;/section&gt;
+&lt;section id=&quot;turning&quot; class=&quot;panel&quot;&gt;&lt;div class=&quot;section-title&quot;&gt;&lt;h2&gt;大きな転機&lt;/h2&gt;&lt;div class=&quot;small&quot;&gt;ただの曲数ではなく、上達の方向が変わった地点。&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;turning&quot;&gt;
+  &lt;div class=&quot;turn&quot; style=&quot;--c:#38bdf8&quot;&gt;&lt;div class=&quot;num&quot;&gt;01&lt;/div&gt;&lt;h3&gt;けいおんと初心者ロックで入口ができた&lt;/h3&gt;&lt;p&gt;「ギターを持つ自分がかっこいい」期。パワーコードとリフで、曲を弾く快感を先に掴んでいるのが強い。&lt;/p&gt;&lt;/div&gt;
+  &lt;div class=&quot;turn&quot; style=&quot;--c:#fb7185&quot;&gt;&lt;div class=&quot;num&quot;&gt;02&lt;/div&gt;&lt;h3&gt;軽音部でバンド文脈に変換された&lt;/h3&gt;&lt;p&gt;一人で弾ける曲から、曲中の役割、音量、ノリ、キメ、アンサンブルへ。ここで一段ギタリストっぽくなる。&lt;/p&gt;&lt;/div&gt;
+  &lt;div class=&quot;turn&quot; style=&quot;--c:#22d3ee&quot;&gt;&lt;div class=&quot;num&quot;&gt;03&lt;/div&gt;&lt;h3&gt;大学でコード/セッション/制作へ拡張&lt;/h3&gt;&lt;p&gt;東京事変、R&amp;B、ブルース、フュージョンで、リードも伴奏も作る側も見えるようになっている。&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;&lt;/section&gt;
+&lt;section id=&quot;matrix&quot; class=&quot;panel&quot;&gt;&lt;div class=&quot;section-title&quot;&gt;&lt;h2&gt;スキルの変化&lt;/h2&gt;&lt;div class=&quot;small&quot;&gt;課題曲アプリの「ユーザー診断」にも使えそうな見せ方。&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;matrix&quot;&gt;
+  &lt;div class=&quot;cell head&quot;&gt;時期&lt;/div&gt;&lt;div class=&quot;cell head&quot;&gt;主な武器&lt;/div&gt;&lt;div class=&quot;cell head&quot;&gt;曲の選び方&lt;/div&gt;&lt;div class=&quot;cell head&quot;&gt;次に伸ばしたい方向&lt;/div&gt;
+  &lt;div class=&quot;cell head&quot;&gt;中学〜高1&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;パワーコード、低音リフ、ハイゲイン、速いリフ&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;好きな曲・弾けたら気持ちいい曲&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;右手の安定、ミュート、テンポ&lt;/div&gt;
+  &lt;div class=&quot;cell head&quot;&gt;高2〜高3&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;カッティング、オルタナ、歌伴、コードワーク&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;バンドで映える曲、邦ロック、事変系&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;コード感、ノリ、音作り&lt;/div&gt;
+  &lt;div class=&quot;cell head&quot;&gt;大学前半&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;アンサンブル、ライブ対応、曲数対応&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;軽音で成立する曲、同期/後輩とできる曲&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;バンド内の役割、アレンジ&lt;/div&gt;
+  &lt;div class=&quot;cell head&quot;&gt;大学後半&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;R&amp;B、ブルース、セッション、フュージョン&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;難曲、セッション曲、制作につながる曲&lt;/div&gt;&lt;div class=&quot;cell muted&quot;&gt;即興、耳コピ、DTM、作編曲&lt;/div&gt;
+&lt;/div&gt;&lt;div class=&quot;footer-note&quot;&gt;このページは自己分析にも、課題曲ツリーの説明資料にも使える。&lt;/div&gt;&lt;/section&gt;
+&lt;/main&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+  </div>
+</section>
+
+<footer>Prototype / Guitar roadmap MVP / feedback build</footer>
+<div id="toast" class="toast">保存した</div>
+
+<script id="initialData" type="application/json">[{"No":1,"曲名":"Deeper Deeper","Lv":1,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"ギター練習的にかなり優秀。パワーコード入門として優先度高め。","練習ポイント":"余計な弦を鳴らさず、右手の刻みを安定させる。","壁":"右手の安定","次候補":"完全感覚Dreamer","習得スキル":"パワーコード・8ビート","必須スキル":"ピッキング","アーティスト":"ONE OK ROCK","参考動画URL":"","コメント":"簡単。がち優秀。優先度高め（リストに既にある）","技術メモ":"簡単、練習曲として優秀","演奏難易度":1,"エチュード適性":5,"ジャンル定番度":3},{"No":2,"曲名":"20th Century Boy","Lv":1,"主スキル":"低音リフ","推奨ルート":"洋楽ロック","一言説明":"20th Century Boyは低音リフを伸ばす課題曲。低音弦のリフで曲の骨格を作る。休符とノリが見た目以上に大事。","練習ポイント":"前提は「ピッキング」。まずはテンポを落として、壁になる「リフのノリ」を1つずつ潰す。","壁":"リフのノリ","次候補":"A Hard Day's Night","習得スキル":"単音リフ・低音リフ","必須スキル":"ピッキング","アーティスト":"T. Rex","参考動画URL":"","演奏難易度":1,"エチュード適性":4,"ジャンル定番度":5},{"No":3,"曲名":"Don't Say Lazy","Lv":2,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"Don't Say Lazyはパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「コード移動の安定」を1つずつ潰す。","壁":"コード移動の安定","次候補":"American Idiot","習得スキル":"パワーコード・8ビート","必須スキル":"パワーコード","アーティスト":"桜高軽音部","参考動画URL":"","演奏難易度":2,"エチュード適性":3,"ジャンル定番度":4},{"No":4,"曲名":"曇天","Lv":1,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"曇天はパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「テンポキープ」を1つずつ潰す。","壁":"テンポキープ","次候補":"Don't Say Lazy","習得スキル":"パワーコード・疾走感","必須スキル":"パワーコード","アーティスト":"DOES","参考動画URL":"","演奏難易度":1,"エチュード適性":3,"ジャンル定番度":4},{"No":5,"曲名":"修羅","Lv":2,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"修羅はパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「テンポと勢い」を1つずつ潰す。","壁":"テンポと勢い","次候補":"","習得スキル":"パワーコード・リズムギター","必須スキル":"パワーコード","アーティスト":"DOES","参考動画URL":"","演奏難易度":2,"エチュード適性":3,"ジャンル定番度":4},{"No":6,"曲名":"American Idiot","Lv":2,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"American Idiotはパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「高速コード移動」を1つずつ潰す。","壁":"高速コード移動","次候補":"小さな恋のうた","習得スキル":"パワーコード・ストローク","必須スキル":"パワーコード","アーティスト":"Green Day","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":5},{"No":7,"曲名":"完全感覚Dreamer","Lv":4,"主スキル":"オクターブ奏法","推奨ルート":"邦ロック定番","一言説明":"需要があり、ギター練習としても優秀。オクターブ奏法やロックリフの練習になる。","練習ポイント":"オクターブのミュートと移動を安定させる。","壁":"オクターブ移動","次候補":"青い春","習得スキル":"オクターブ奏法・ロックリフ","必須スキル":"パワーコード・単音リフ","アーティスト":"ONE OK ROCK","参考動画URL":"","コメント":"簡単。がち優秀。優先度高め（リストにすでにある）","技術メモ":"オクターブ奏法、ロックリフ","演奏難易度":4,"エチュード適性":5,"ジャンル定番度":4},{"No":8,"曲名":"Back In Black","Lv":2,"主スキル":"ローコード","推奨ルート":"洋楽ロック","一言説明":"Back In Blackはローコードを伸ばす課題曲。開放弦を含むコードでロックの質感を作る。コードの鳴りとキレを整える。","練習ポイント":"前提は「ローコード」。まずはテンポを落として、壁になる「間の取り方」を1つずつ潰す。","壁":"間の取り方","次候補":"Highway To Hell","習得スキル":"ローコードリフ・休符","必須スキル":"ローコード","アーティスト":"AC/DC","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":5},{"No":9,"曲名":"Highway To Hell","Lv":2,"主スキル":"ローコード","推奨ルート":"洋楽ロック","一言説明":"Highway To Hellはローコードを伸ばす課題曲。開放弦を含むコードでロックの質感を作る。コードの鳴りとキレを整える。","練習ポイント":"前提は「ローコード」。まずはテンポを落として、壁になる「コードのキレ」を1つずつ潰す。","壁":"コードのキレ","次候補":"Burn","習得スキル":"ローコードリフ・ロックバッキング","必須スキル":"ローコード","アーティスト":"AC/DC","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":5},{"No":10,"曲名":"Thunderstruck","Lv":4,"主スキル":"レガート","推奨ルート":"洋楽ロック","一言説明":"Thunderstruckはレガートを伸ばす課題曲。ハンマリングやプリングで滑らかに音をつなぐ。粒立ちとリズムが課題。","練習ポイント":"前提は「単音リフ」。まずはテンポを落として、壁になる「粒立ち」を1つずつ潰す。","壁":"粒立ち","次候補":"Don't Stop Me Now","習得スキル":"ハンマリング・プリング・持久力","必須スキル":"単音リフ","アーティスト":"AC/DC","参考動画URL":"","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"No":11,"曲名":"Le Freak","Lv":4,"主スキル":"コードカッティング","推奨ルート":"カッティング/ファンク","一言説明":"Le Freakはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「16ビート・左手ミュート」。まずはテンポを落として、壁になる「左手ミュート」を1つずつ潰す。","壁":"左手ミュート","次候補":"テレキャスターストライプ","習得スキル":"カッティング・ファンクグルーヴ","必須スキル":"16ビート・左手ミュート","アーティスト":"CHIC","参考動画URL":"","演奏難易度":4,"エチュード適性":5,"ジャンル定番度":3},{"No":12,"曲名":"Bad Feeling","Lv":3,"主スキル":"コードカッティング","推奨ルート":"カッティング/ファンク","一言説明":"Bad Feelingはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「16ビート・左手ミュート」。まずはテンポを落として、壁になる「左手ミュート」を1つずつ潰す。","壁":"左手ミュート","次候補":"Le Freak","習得スキル":"コードカッティング・アクセント","必須スキル":"16ビート・左手ミュート","アーティスト":"BOØWY","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":3},{"No":13,"曲名":"小さな恋のうた","Lv":2,"主スキル":"ブリッジミュート","推奨ルート":"邦ロック定番","一言説明":"小さな恋のうたはブリッジミュートを伸ばす課題曲。右手の位置と力加減で音の長さをコントロールする。粒を揃える練習に向く。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「粒を揃える」を1つずつ潰す。","壁":"粒を揃える","次候補":"Smells Like Teen Spirit","習得スキル":"ブリッジミュート・8ビート","必須スキル":"パワーコード","アーティスト":"MONGOL800","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":5},{"No":14,"曲名":"Smoke On The Water","Lv":1,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"Smoke On The Waterはパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「ピッキング」。まずはテンポを落として、壁になる「リズムの間」を1つずつ潰す。","壁":"リズムの間","次候補":"Deeper Deeper","習得スキル":"パワーコードリフ","必須スキル":"ピッキング","アーティスト":"Deep Purple","参考動画URL":"","演奏難易度":1,"エチュード適性":4,"ジャンル定番度":5},{"No":15,"曲名":"Burn","Lv":3,"主スキル":"パワーコード","推奨ルート":"洋楽ロック","一言説明":"Burnはパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード・単音リフ」。まずはテンポを落として、壁になる「テンポとリフの精度」を1つずつ潰す。","壁":"テンポとリフの精度","次候補":"Thunderstruck","習得スキル":"パワーコードリフ・ハードロック","必須スキル":"パワーコード・単音リフ","アーティスト":"Deep Purple","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"No":16,"曲名":"Smells Like Teen Spirit","Lv":3,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"Smells Like Teen Spiritはパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード・ミュート」。まずはテンポを落として、壁になる「ノイズコントロール」を1つずつ潰す。","壁":"ノイズコントロール","次候補":"","習得スキル":"パワーコードリフ・ミュート混じりのストローク","必須スキル":"パワーコード・ミュート","アーティスト":"Nirvana","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":5},{"No":17,"曲名":"Mix Juiceのいうとおり","Lv":4,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ユニゾン枠。コードワークと右手アクセントの練習に向くが、やや中級。","練習ポイント":"アクセントの位置を明確にして、コードの切替で遅れない。","壁":"アクセントとコード移動","次候補":"場違いハミングバード","習得スキル":"コードワーク・右手アクセント","必須スキル":"コードチェンジ・アクセント","アーティスト":"UNISON SQUARE GARDEN","参考動画URL":"","コメント":"ユニゾン枠。やや中級","技術メモ":"コードワーク（リストあり）","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":3},{"No":18,"曲名":"ふわふわ時間","Lv":1,"主スキル":"パワーコード","推奨ルート":"けいおん","一言説明":"ふわふわ時間はパワーコードを伸ばす課題曲。ギター初心者の最初の武器。余計な弦を鳴らさず、右手の刻みを安定させる。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「曲全体を通す体力」を1つずつ潰す。","壁":"曲全体を通す体力","次候補":"私の恋はホッチキス","習得スキル":"パワーコード・バンド入門","必須スキル":"パワーコード","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":1,"エチュード適性":3,"ジャンル定番度":5},{"No":19,"曲名":"私の恋はホッチキス","Lv":3,"主スキル":"コードワーク","推奨ルート":"けいおん","一言説明":"私の恋はホッチキスはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「ローコード・単音リフ」。まずはテンポを落として、壁になる「コードとリフの切替」を1つずつ潰す。","壁":"コードとリフの切替","次候補":"ふでペンボールペン","習得スキル":"コードワーク・単音リフ・アクセント","必須スキル":"ローコード・単音リフ","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"No":20,"曲名":"ふでペンボールペン","Lv":3,"主スキル":"単音リフ","推奨ルート":"けいおん","一言説明":"ふでペンボールペンは単音リフを伸ばす課題曲。メロディックなリフの入口。弾く音だけでなく休符の置き方も練習する。","練習ポイント":"前提は「パワーコード・単音リフ」。まずはテンポを落として、壁になる「フレーズの歌わせ方」を1つずつ潰す。","壁":"フレーズの歌わせ方","次候補":"冬の日","習得スキル":"単音リフ・クリシェ・パワーコード","必須スキル":"パワーコード・単音リフ","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"No":21,"曲名":"U&I","Lv":4,"主スキル":"カッティング","推奨ルート":"けいおん","一言説明":"U&Iはカッティングを伸ばす課題曲。鳴らす音より鳴らさない音を管理する練習。右手と左手の同期が肝。","練習ポイント":"前提は「パワーコード・単音リフ」。まずはテンポを落として、壁になる「リズムの切替」を1つずつ潰す。","壁":"リズムの切替","次候補":"五月雨20ラブ","習得スキル":"単音リフ・パワーコード・カッティング","必須スキル":"パワーコード・単音リフ","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":4,"エチュード適性":5,"ジャンル定番度":4},{"No":22,"曲名":"ぴゅあぴゅあはーと","Lv":5,"主スキル":"オクターブ奏法","推奨ルート":"けいおん","一言説明":"ぴゅあぴゅあはーとはオクターブ奏法を伸ばす課題曲。オクターブ音程でリフを太く聞かせる練習。移動とミュートがポイント。","練習ポイント":"前提は「カッティング・単音リフ」。まずはテンポを落として、壁になる「右手のキレ」を1つずつ潰す。","壁":"右手のキレ","次候補":"GO! GO! MANIAC","習得スキル":"オクターブ奏法・カッティング","必須スキル":"カッティング・単音リフ","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":4},{"No":23,"曲名":"五月雨20ラブ","Lv":4,"主スキル":"カッティング","推奨ルート":"けいおん","一言説明":"五月雨20ラブはカッティングを伸ばす課題曲。鳴らす音より鳴らさない音を管理する練習。右手と左手の同期が肝。","練習ポイント":"前提は「パワーコード・カッティング」。まずはテンポを落として、壁になる「テンポとミュート」を1つずつ潰す。","壁":"テンポとミュート","次候補":"Listen!!","習得スキル":"パワーコードカッティング","必須スキル":"パワーコード・カッティング","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":4,"エチュード適性":5,"ジャンル定番度":4},{"No":24,"曲名":"冬の日","Lv":2,"主スキル":"単音リフ","推奨ルート":"けいおん","一言説明":"冬の日は単音リフを伸ばす課題曲。メロディックなリフの入口。弾く音だけでなく休符の置き方も練習する。","練習ポイント":"前提は「ピッキング」。まずはテンポを落として、壁になる「音価の管理」を1つずつ潰す。","壁":"音価の管理","次候補":"U&I","習得スキル":"単音リフ","必須スキル":"ピッキング","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":4},{"No":25,"曲名":"Listen!!","Lv":4,"主スキル":"コードカッティング","推奨ルート":"けいおん","一言説明":"Listen!!はコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「コードワーク・16ビート」。まずはテンポを落として、壁になる「リズムの細かさ」を1つずつ潰す。","壁":"リズムの細かさ","次候補":"ぴゅあぴゅあはーと","習得スキル":"コードカッティングリフ","必須スキル":"コードワーク・16ビート","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":4,"エチュード適性":5,"ジャンル定番度":4},{"No":26,"曲名":"GO! GO! MANIAC","Lv":6,"主スキル":"コードカッティング","推奨ルート":"けいおん","一言説明":"GO! GO! MANIACはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「コードワーク・16ビート」。まずはテンポを落として、壁になる「テンポとキメ」を1つずつ潰す。","壁":"テンポとキメ","次候補":"カレーのちライス","習得スキル":"コードカッティングリフ・高速リズム","必須スキル":"コードワーク・16ビート","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":4},{"No":27,"曲名":"世界の終わり","Lv":5,"主スキル":"コードカッティング","推奨ルート":"東京事変/オルタナ","一言説明":"世界の終わりはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「コードワーク・左手フォーム」。まずはテンポを落として、壁になる「フォームの安定」を1つずつ潰す。","壁":"フォームの安定","次候補":"","習得スキル":"コードカッティングリフ・左手フォーム","必須スキル":"コードワーク・左手フォーム","アーティスト":"THEE MICHELLE GUN ELEPHANT","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":3},{"No":28,"曲名":"ミッドナイト・クラクション・ベイビー","Lv":5,"主スキル":"コードカッティング","推奨ルート":"東京事変/オルタナ","一言説明":"ミッドナイト・クラクション・ベイビーはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「低音リフ・16ビート」。まずはテンポを落として、壁になる「リズムの押し引き」を1つずつ潰す。","壁":"リズムの押し引き","次候補":"","習得スキル":"コードカッティングリフ・低音弦リフ","必須スキル":"低音リフ・16ビート","アーティスト":"THEE MICHELLE GUN ELEPHANT","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":3},{"No":29,"曲名":"God Knows...","Lv":4,"主スキル":"レガート","推奨ルート":"アニソン/ボカロ","一言説明":"God Knows...はレガートを伸ばす課題曲。ハンマリングやプリングで滑らかに音をつなぐ。粒立ちとリズムが課題。","練習ポイント":"前提は「単音リフ・歪み」。まずはテンポを落として、壁になる「速いフレーズの粒」を1つずつ潰す。","壁":"速いフレーズの粒","次候補":"Only My Railgun","習得スキル":"ハンマリング・プリング・アニソンリード","必須スキル":"単音リフ・歪み","アーティスト":"涼宮ハルヒ（平野綾）","参考動画URL":"","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":5},{"No":30,"曲名":"Only My Railgun","Lv":5,"主スキル":"ハイゲイン","推奨ルート":"アニソン/ボカロ","一言説明":"Only My Railgunはハイゲインを伸ばす課題曲。深い歪みの中でノイズを抑えて弾く練習。ミュートの粗が出やすい。","練習ポイント":"前提は「パワーコード・ブリッジミュート」。まずはテンポを落として、壁になる「ノイズ処理」を1つずつ潰す。","壁":"ノイズ処理","次候補":"夜咄ディセイブ","習得スキル":"深い歪み・パワーコードフレーズ・クリシェ","必須スキル":"パワーコード・ブリッジミュート","アーティスト":"fripSide","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":31,"曲名":"Little Wing","Lv":7,"主スキル":"ジミヘンコード","推奨ルート":"ブルース","一言説明":"Little Wingはジミヘンコードを伸ばす課題曲。コードとリードの境目を溶かす練習。親指フォームや装飾音が鍵。","練習ポイント":"前提は「コードワーク・ブルース・カッティング」。まずはテンポを落として、壁になる「親指フォームと装飾」を1つずつ潰す。","壁":"親指フォームと装飾","次候補":"","習得スキル":"コードワーク・ジミヘンコード・アクセント","必須スキル":"コードワーク・ブルース・カッティング","アーティスト":"Jimi Hendrix","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":32,"曲名":"Purple Haze","Lv":6,"主スキル":"ジミヘンコード","推奨ルート":"ブルース","一言説明":"Purple Hazeはジミヘンコードを伸ばす課題曲。コードとリードの境目を溶かす練習。親指フォームや装飾音が鍵。","練習ポイント":"前提は「パワーコード・ブルース」。まずはテンポを落として、壁になる「フォームとリフのノリ」を1つずつ潰す。","壁":"フォームとリフのノリ","次候補":"Pride and Joy","習得スキル":"ジミヘンコード・左手フォーム","必須スキル":"パワーコード・ブルース","アーティスト":"Jimi Hendrix","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":33,"曲名":"夜咄ディセイブ","Lv":5,"主スキル":"高速フレーズ","推奨ルート":"アニソン/ボカロ","一言説明":"夜咄ディセイブは高速フレーズを伸ばす課題曲。速い単音を粒立ちよく弾く練習。力みを減らすことが最優先。","練習ポイント":"前提は「単音リフ・カッティング」。まずはテンポを落として、壁になる「テンポへの追従」を1つずつ潰す。","壁":"テンポへの追従","次候補":"カゲロウデイズ","習得スキル":"高速リフ・カッティング","必須スキル":"単音リフ・カッティング","アーティスト":"じん","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":4},{"No":34,"曲名":"Can't Stop","Lv":6,"主スキル":"単音カッティング","推奨ルート":"カッティング/ファンク","一言説明":"Can't Stopは単音カッティングを伸ばす課題曲。単音だけでグルーヴを出す練習。不要弦ミュートが甘いと崩れやすい。","練習ポイント":"前提は「カッティング・左手ミュート」。まずはテンポを落として、壁になる「不要弦ミュート」を1つずつ潰す。","壁":"不要弦ミュート","次候補":"お勉強しといてよ","習得スキル":"単音カッティング・ファンク","必須スキル":"カッティング・左手ミュート","アーティスト":"Red Hot Chili Peppers","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":35,"曲名":"Dani California","Lv":6,"主スキル":"コードワーク","推奨ルート":"カッティング/ファンク","一言説明":"Dani Californiaはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードワーク・ペンタ」。まずはテンポを落として、壁になる「ソロの表現」を1つずつ潰す。","壁":"ソロの表現","次候補":"Lunch Time","習得スキル":"コードワーク・アクセント・ギターソロ","必須スキル":"コードワーク・ペンタ","アーティスト":"Red Hot Chili Peppers","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":36,"曲名":"テレキャスター・ストライプ","Lv":5,"主スキル":"カッティング","推奨ルート":"邦ロック定番","一言説明":"中級寄りだが、ギター上達感がかなりある曲。カッティング練習として優秀。","練習ポイント":"左手ミュートと右手の振りを分離して練習する。","壁":"カッティングのキレ","次候補":"お勉強しといてよ","習得スキル":"カッティング・邦ロックアレンジ","必須スキル":"コードカッティング・左手ミュート","アーティスト":"ポルカドットスティングレイ","参考動画URL":"","コメント":"中級寄り。ギター上達感あり","技術メモ":"中級向け、カッティング（リストあり）","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":4},{"No":37,"曲名":"Pride and Joy","Lv":7,"主スキル":"ブルースフレーズ","推奨ルート":"ブルース","一言説明":"Pride and Joyはブルースフレーズを伸ばす課題曲。ロックギターの語彙を増やす入口。チョーキング・間・ニュアンスが大事。","練習ポイント":"前提は「ペンタ・シャッフル」。まずはテンポを落として、壁になる「シャッフルとミュート」を1つずつ潰す。","壁":"シャッフルとミュート","次候補":"Catfish Blues","習得スキル":"ブルースフレーズ・右手アクセント・左手ミュート","必須スキル":"ペンタ・シャッフル","アーティスト":"Stevie Ray Vaughan","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":38,"曲名":"Johnny B. Goode","Lv":5,"主スキル":"ブルースフレーズ","推奨ルート":"ブルース","一言説明":"Johnny B. Goodeはブルースフレーズを伸ばす課題曲。ロックギターの語彙を増やす入口。チョーキング・間・ニュアンスが大事。","練習ポイント":"前提は「ペンタトニック」。まずはテンポを落として、壁になる「定番フレーズの粒」を1つずつ潰す。","壁":"定番フレーズの粒","次候補":"Purple Haze","習得スキル":"ブルースフレーズ・ロックンロール","必須スキル":"ペンタトニック","アーティスト":"Chuck Berry","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":4},{"No":39,"曲名":"Don't Stop Me Now","Lv":6,"主スキル":"ギターソロ","推奨ルート":"洋楽ロック","一言説明":"Don't Stop Me Nowはギターソロを伸ばす課題曲。曲の中で主役になる練習。フレーズの正確さだけでなく歌わせ方を見る。","練習ポイント":"前提は「単音リフ・チョーキング」。まずはテンポを落として、壁になる「ソロの歌わせ方」を1つずつ潰す。","壁":"ソロの歌わせ方","次候補":"Green-Tinted Sixties Mind","習得スキル":"ギターソロ・メロディックリード","必須スキル":"単音リフ・チョーキング","アーティスト":"Queen","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":4},{"No":40,"曲名":"夜に駆ける","Lv":5,"主スキル":"コードワーク","推奨ルート":"R&B/フュージョン","一言説明":"夜に駆けるはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ・カッティング」。まずはテンポを落として、壁になる「テンポとコード移動」を1つずつ潰す。","壁":"テンポとコード移動","次候補":"CQCQ","習得スキル":"コードワーク・コードカッティング","必須スキル":"コードチェンジ・カッティング","アーティスト":"YOASOBI","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":3},{"No":41,"曲名":"カゲロウデイズ","Lv":5,"主スキル":"コードカッティング","推奨ルート":"アニソン/ボカロ","一言説明":"カゲロウデイズはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「コードワーク・16ビート」。まずはテンポを落として、壁になる「キメの多さ」を1つずつ潰す。","壁":"キメの多さ","次候補":"サマータイムレコード","習得スキル":"コードカッティング・コードワーク","必須スキル":"コードワーク・16ビート","アーティスト":"じん","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":4},{"No":42,"曲名":"サマータイムレコード","Lv":5,"主スキル":"アルペジオ","推奨ルート":"アニソン/ボカロ","一言説明":"サマータイムレコードはアルペジオを伸ばす課題曲。コードを分散して歌わせる練習。音の長さと開放弦の処理が大事。","練習ポイント":"前提は「ローコード・開放弦」。まずはテンポを落として、壁になる「音の分離」を1つずつ潰す。","壁":"音の分離","次候補":"バッド・ダンス・ホール","習得スキル":"開放弦アルペジオ","必須スキル":"ローコード・開放弦","アーティスト":"じん","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":43,"曲名":"お勉強しといてよ","Lv":6,"主スキル":"単音カッティング","推奨ルート":"カッティング/ファンク","一言説明":"お勉強しといてよは単音カッティングを伸ばす課題曲。単音だけでグルーヴを出す練習。不要弦ミュートが甘いと崩れやすい。","練習ポイント":"前提は「カッティング・単音リフ」。まずはテンポを落として、壁になる「テンポとミュート」を1つずつ潰す。","壁":"テンポとミュート","次候補":"Dani California","習得スキル":"単音カッティングリフ","必須スキル":"カッティング・単音リフ","アーティスト":"ずっと真夜中でいいのに。","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":44,"曲名":"CQCQ","Lv":5,"主スキル":"付点8分ディレイ","推奨ルート":"R&B/フュージョン","一言説明":"CQCQは付点8分ディレイを伸ばす課題曲。ディレイをリズムの一部として扱う練習。テンポ感がズレると一気に崩れる。","練習ポイント":"前提は「アクセント・空間系」。まずはテンポを落として、壁になる「ディレイとの同期」を1つずつ潰す。","壁":"ディレイとの同期","次候補":"本音","習得スキル":"付点8分ディレイ・リズム構築","必須スキル":"アクセント・空間系","アーティスト":"神様、僕は気づいてしまった","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":3},{"No":45,"曲名":"バッド・ダンス・ホール","Lv":5,"主スキル":"コードカッティング","推奨ルート":"アニソン/ボカロ","一言説明":"バッド・ダンス・ホールはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「コードワーク・16ビート」。まずはテンポを落として、壁になる「テンポとキメ」を1つずつ潰す。","壁":"テンポとキメ","次候補":"天ノ弱","習得スキル":"コードカッティングリフ","必須スキル":"コードワーク・16ビート","アーティスト":"カラスヤサボウ","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":4},{"No":46,"曲名":"天ノ弱","Lv":6,"主スキル":"オクターブ奏法","推奨ルート":"アニソン/ボカロ","一言説明":"天ノ弱はオクターブ奏法を伸ばす課題曲。オクターブ音程でリフを太く聞かせる練習。移動とミュートがポイント。","練習ポイント":"前提は「低音リフ・単音リフ」。まずはテンポを落として、壁になる「移動量とテンポ」を1つずつ潰す。","壁":"移動量とテンポ","次候補":"ロストワンの号哭","習得スキル":"低音単音リフ・オクターブ奏法","必須スキル":"低音リフ・単音リフ","アーティスト":"164","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":4},{"No":47,"曲名":"Day Tripper","Lv":2,"主スキル":"単音リフ","推奨ルート":"洋楽ロック","一言説明":"Day Tripperは単音リフを伸ばす課題曲。メロディックなリフの入口。弾く音だけでなく休符の置き方も練習する。","練習ポイント":"前提は「ピッキング」。まずはテンポを落として、壁になる「リフのノリ」を1つずつ潰す。","壁":"リフのノリ","次候補":"Back In Black","習得スキル":"単音リフ・ロックリフ","必須スキル":"ピッキング","アーティスト":"The Beatles","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":4},{"No":48,"曲名":"Killing In The Name","Lv":6,"主スキル":"ドロップD","推奨ルート":"ラウド","一言説明":"Killing In The NameはドロップDを伸ばす課題曲。低音弦を使った重いリフの入口。右手の制御と音作りが重要。","練習ポイント":"前提は「ブリッジミュート・深い歪み」。まずはテンポを落として、壁になる「重さとノイズ処理」を1つずつ潰す。","壁":"重さとノイズ処理","次候補":"R","習得スキル":"ドロップD・深い歪み・ブリッジミュート","必須スキル":"ブリッジミュート・深い歪み","アーティスト":"Rage Against The Machine","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":3},{"No":49,"曲名":"ハナマル☆センセイション","Lv":5,"主スキル":"ブリッジミュート","推奨ルート":"ラウド","一言説明":"ハナマル☆センセイションはブリッジミュートを伸ばす課題曲。右手の位置と力加減で音の長さをコントロールする。粒を揃える練習に向く。","練習ポイント":"前提は「深い歪み・パワーコード」。まずはテンポを落として、壁になる「高速刻み」を1つずつ潰す。","壁":"高速刻み","次候補":"Killing In The Name","習得スキル":"深い歪み・ブリッジミュート","必須スキル":"深い歪み・パワーコード","アーティスト":"Little Non","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":3},{"No":50,"曲名":"R","Lv":6,"主スキル":"ドロップD","推奨ルート":"ラウド","一言説明":"RはドロップDを伸ばす課題曲。低音弦を使った重いリフの入口。右手の制御と音作りが重要。","練習ポイント":"前提は「ブリッジミュート・深い歪み」。まずはテンポを落として、壁になる「タイトな刻み」を1つずつ潰す。","壁":"タイトな刻み","次候補":"","習得スキル":"ドロップD・深い歪み・ブリッジミュート","必須スキル":"ブリッジミュート・深い歪み","アーティスト":"Roselia","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":3},{"No":51,"曲名":"警告","Lv":7,"主スキル":"オルタナリフ","推奨ルート":"東京事変/オルタナ","一言説明":"警告はオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「単音リフ・コードワーク」。まずはテンポを落として、壁になる「キメとアンサンブル」を1つずつ潰す。","壁":"キメとアンサンブル","次候補":"群青日和","習得スキル":"オルタナリフ・バンドアンサンブル","必須スキル":"単音リフ・コードワーク","アーティスト":"椎名林檎","参考動画URL":"","演奏難易度":7,"エチュード適性":4,"ジャンル定番度":3},{"No":52,"曲名":"宝島","Lv":8,"主スキル":"フュージョン","推奨ルート":"R&B/フュージョン","一言説明":"宝島はフュージョンを伸ばす課題曲。フュージョンを中心に伸ばす課題曲。","練習ポイント":"前提は「高速フレーズ・アンサンブル」。まずはテンポを落として、壁になる「音価とアンサンブル」を1つずつ潰す。","壁":"音価とアンサンブル","次候補":"Cosmic Sans","習得スキル":"フュージョン・高速単音・オクターブ","必須スキル":"高速フレーズ・アンサンブル","アーティスト":"T-SQUARE","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"No":53,"曲名":"BWLAUTE BEIRRED","Lv":7,"主スキル":"要分類","推奨ルート":"未分類","一言説明":"BWLAUTE BEIRREDは、ぬきたし2 OPとして登録していた課題曲。細かいスキル分類は後で要確認。","練習ポイント":"前提は「単音リフ・コードワーク」。まずはテンポを落として、壁になる「要耳コピ/分類確認」を1つずつ潰す。","壁":"曲名/内容確認","次候補":"","習得スキル":"要分類","必須スキル":"要確認","アーティスト":"要確認","参考動画URL":"","演奏難易度":7,"エチュード適性":3,"ジャンル定番度":1},{"No":54,"曲名":"デリヘル呼んだら君がきた","Lv":7,"主スキル":"高速フレーズ","推奨ルート":"アニソン/ボカロ","一言説明":"デリヘル呼んだら君がきたは高速フレーズを伸ばす課題曲。速い単音を粒立ちよく弾く練習。力みを減らすことが最優先。","練習ポイント":"前提は「単音リフ・ギターソロ」。まずはテンポを落として、壁になる「テンポとソロ」を1つずつ潰す。","壁":"テンポとソロ","次候補":"","習得スキル":"高速リフ・ギターソロ","必須スキル":"単音リフ・ギターソロ","アーティスト":"ナナホシ管弦楽団","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":4},{"No":55,"曲名":"カレーのちライス","Lv":5,"主スキル":"コードワーク","推奨ルート":"けいおん","一言説明":"カレーのちライスはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・ローコード」。まずはテンポを落として、壁になる「バンドでのまとまり」を1つずつ潰す。","壁":"バンドでのまとまり","次候補":"First Good Bye","習得スキル":"パワーコード・コードワーク","必須スキル":"パワーコード・ローコード","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":56,"曲名":"本音","Lv":7,"主スキル":"アンサンブル","推奨ルート":"R&B/フュージョン","一言説明":"本音はアンサンブルを伸ばす課題曲。自分だけで完結せず、ドラム・ベース・ボーカルとの噛み合わせを見る練習。","練習ポイント":"前提は「コードワーク」。まずはテンポを落として、壁になる「ボーカルとの絡み」を1つずつ潰す。","壁":"ボーカルとの絡み","次候補":"If I Ain't Got You","習得スキル":"コードワーク・バンドアンサンブル","必須スキル":"コードワーク","アーティスト":"要確認","参考動画URL":"","演奏難易度":7,"エチュード適性":4,"ジャンル定番度":3},{"No":57,"曲名":"Cosmic Sans","Lv":8,"主スキル":"即興演奏","推奨ルート":"R&B/フュージョン","一言説明":"Cosmic Sansは即興演奏を伸ばす課題曲。即興演奏を中心に伸ばす課題曲。","練習ポイント":"前提は「コードワーク・セッション」。まずはテンポを落として、壁になる「即興性」を1つずつ潰す。","壁":"即興性","次候補":"","習得スキル":"ジャズロック・アドリブ","必須スキル":"コードワーク・セッション","アーティスト":"Cory Wong","参考動画URL":"","演奏難易度":8,"エチュード適性":4,"ジャンル定番度":3},{"No":58,"曲名":"Lunch Time","Lv":8,"主スキル":"コードカッティング","推奨ルート":"カッティング/ファンク","一言説明":"Lunch Timeはコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「カッティング・コードワーク」。まずはテンポを落として、壁になる「グルーヴとコード感」を1つずつ潰す。","壁":"グルーヴとコード感","次候補":"","習得スキル":"フュージョンカッティング","必須スキル":"カッティング・コードワーク","アーティスト":"要確認","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"No":59,"曲名":"白玉楼階段の幻闘","Lv":8,"主スキル":"高速フレーズ","推奨ルート":"R&B/フュージョン","一言説明":"白玉楼階段の幻闘は高速フレーズを伸ばす課題曲。速い単音を粒立ちよく弾く練習。力みを減らすことが最優先。","練習ポイント":"前提は「単音リフ・ピッキング」。まずはテンポを落として、壁になる「テンポと運指」を1つずつ潰す。","壁":"テンポと運指","次候補":"Säkkijärven Polkka","習得スキル":"高速フレーズ・テクニカルリード","必須スキル":"単音リフ・ピッキング","アーティスト":"東京アクティブNEETs","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"No":60,"曲名":"Green-Tinted Sixties Mind","Lv":8,"主スキル":"コードワーク","推奨ルート":"洋楽ロック","一言説明":"Green-Tinted Sixties Mindはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードワーク・リード」。まずはテンポを落として、壁になる「コードとメロの両立」を1つずつ潰す。","壁":"コードとメロの両立","次候補":"Daddy, Brother, Lover, Little Boy","習得スキル":"ジャズロック・コードワーク","必須スキル":"コードワーク・リード","アーティスト":"MR. BIG","参考動画URL":"","演奏難易度":8,"エチュード適性":4,"ジャンル定番度":4},{"No":61,"曲名":"ときめきシュガー","Lv":3,"主スキル":"コードワーク","推奨ルート":"けいおん","一言説明":"ときめきシュガーはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・ローコード」。まずはテンポを落として、壁になる「曲全体の安定」を1つずつ潰す。","壁":"曲全体の安定","次候補":"","習得スキル":"コードワーク・ポップスバッキング","必須スキル":"パワーコード・ローコード","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"No":62,"曲名":"天使にふれたよ！","Lv":3,"主スキル":"コードワーク","推奨ルート":"けいおん","一言説明":"天使にふれたよ！はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「ローコード」。まずはテンポを落として、壁になる「音量バランス」を1つずつ潰す。","壁":"音量バランス","次候補":"","習得スキル":"コードワーク・アルペジオ","必須スキル":"ローコード","アーティスト":"放課後ティータイム","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"No":63,"曲名":"A Hard Day's Night","Lv":2,"主スキル":"ローコード","推奨ルート":"洋楽ロック","一言説明":"A Hard Day's Nightはローコードを伸ばす課題曲。開放弦を含むコードでロックの質感を作る。コードの鳴りとキレを整える。","練習ポイント":"前提は「ローコード」。まずはテンポを落として、壁になる「コードの響き」を1つずつ潰す。","壁":"コードの響き","次候補":"Day Tripper","習得スキル":"ローコード・コードワーク","必須スキル":"ローコード","アーティスト":"The Beatles","参考動画URL":"","演奏難易度":2,"エチュード適性":4,"ジャンル定番度":4},{"No":64,"曲名":"会心の一撃リフ","Lv":3,"主スキル":"単音リフ","推奨ルート":"邦ロック定番","一言説明":"会心の一撃リフは単音リフを伸ばす課題曲。メロディックなリフの入口。弾く音だけでなく休符の置き方も練習する。","練習ポイント":"前提は「ピッキング」。まずはテンポを落として、壁になる「リズムのキレ」を1つずつ潰す。","壁":"リズムのキレ","次候補":"","習得スキル":"単音リフ・邦ロックリフ","必須スキル":"ピッキング","アーティスト":"RADWIMPS","参考動画URL":"","演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"No":65,"曲名":"Daddy, Brother, Lover, Little Boy","Lv":8,"主スキル":"高速フレーズ","推奨ルート":"洋楽ロック","一言説明":"Daddy, Brother, Lover, Little Boyは高速フレーズを伸ばす課題曲。速い単音を粒立ちよく弾く練習。力みを減らすことが最優先。","練習ポイント":"前提は「オルタネイト・ハンマリング」。まずはテンポを落として、壁になる「テンポと精度」を1つずつ潰す。","壁":"テンポと精度","次候補":"","習得スキル":"高速リフ・テクニカルリード","必須スキル":"オルタネイト・ハンマリング","アーティスト":"MR. BIG","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":4},{"No":66,"曲名":"ロストワンの号哭","Lv":6,"主スキル":"高速フレーズ","推奨ルート":"アニソン/ボカロ","一言説明":"ロストワンの号哭は高速フレーズを伸ばす課題曲。速い単音を粒立ちよく弾く練習。力みを減らすことが最優先。","練習ポイント":"前提は「単音リフ・コードカッティング」。まずはテンポを落として、壁になる「テンポとキメ」を1つずつ潰す。","壁":"テンポとキメ","次候補":"デリヘル呼んだら君がきた","習得スキル":"高速リフ・コードワーク","必須スキル":"単音リフ・コードカッティング","アーティスト":"Neru","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":4},{"No":67,"曲名":"少女S","Lv":3,"主スキル":"アンサンブル","推奨ルート":"邦ロック定番","一言説明":"少女Sはアンサンブルを伸ばす課題曲。自分だけで完結せず、ドラム・ベース・ボーカルとの噛み合わせを見る練習。","練習ポイント":"前提は「パワーコード」。まずはテンポを落として、壁になる「初心者バンドで合わせる」を1つずつ潰す。","壁":"初心者バンドで合わせる","次候補":"","習得スキル":"パワーコード・バンド入門","必須スキル":"パワーコード","アーティスト":"SCANDAL","参考動画URL":"","演奏難易度":3,"エチュード適性":3,"ジャンル定番度":4},{"No":68,"曲名":"紅蓮華","Lv":5,"主スキル":"コードワーク","推奨ルート":"アニソン/ボカロ","一言説明":"紅蓮華はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・単音リフ」。まずはテンポを落として、壁になる「キメの精度」を1つずつ潰す。","壁":"キメの精度","次候補":"","習得スキル":"アニソンバッキング・キメ","必須スキル":"パワーコード・単音リフ","アーティスト":"LiSA","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":69,"曲名":"群青日和","Lv":6,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"群青日和はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードカッティング」。まずはテンポを落として、壁になる「コード感と疾走感」を1つずつ潰す。","壁":"コード感と疾走感","次候補":"閃光少女","習得スキル":"コードワーク・カッティング","必須スキル":"コードカッティング","アーティスト":"東京事変","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":70,"曲名":"NIPPON","Lv":6,"主スキル":"オルタナリフ","推奨ルート":"東京事変/オルタナ","一言説明":"NIPPONはオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「コードワーク・単音リフ」。まずはテンポを落として、壁になる「テンポとアンサンブル」を1つずつ潰す。","壁":"テンポとアンサンブル","次候補":"","習得スキル":"オルタナリフ・コードワーク","必須スキル":"コードワーク・単音リフ","アーティスト":"椎名林檎","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":3},{"No":71,"曲名":"じょいふる","Lv":4,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"じょいふるはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・ローコード」。まずはテンポを落として、壁になる「テンション維持」を1つずつ潰す。","壁":"テンション維持","次候補":"","習得スキル":"ポップスバッキング・アンサンブル","必須スキル":"パワーコード・ローコード","アーティスト":"いきものがかり","参考動画URL":"","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"No":72,"曲名":"閃光少女","Lv":6,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"閃光少女はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードワーク・ギターソロ」。まずはテンポを落として、壁になる「キメと展開」を1つずつ潰す。","壁":"キメと展開","次候補":"自由へ道連れ","習得スキル":"コードワーク・ギターソロ","必須スキル":"コードワーク・ギターソロ","アーティスト":"東京事変","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":73,"曲名":"東京","Lv":5,"主スキル":"オルタナリフ","推奨ルート":"東京事変/オルタナ","一言説明":"東京はオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「単音リフ」。まずはテンポを落として、壁になる「音作りとノリ」を1つずつ潰す。","壁":"音作りとノリ","次候補":"","習得スキル":"オルタナリフ・シンプルな強度","必須スキル":"単音リフ","アーティスト":"PEDRO","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":3},{"No":74,"曲名":"TATTOOあり","Lv":6,"主スキル":"オルタナリフ","推奨ルート":"東京事変/オルタナ","一言説明":"TATTOOありはオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「カッティング・単音リフ」。まずはテンポを落として、壁になる「鋭いリズム」を1つずつ潰す。","壁":"鋭いリズム","次候補":"","習得スキル":"オルタナリフ・カッティング","必須スキル":"カッティング・単音リフ","アーティスト":"NUMBER GIRL","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":75,"曲名":"Honnoji","Lv":8,"主スキル":"アンサンブル","推奨ルート":"東京事変/オルタナ","一言説明":"Honnojiはアンサンブルを伸ばす課題曲。自分だけで完結せず、ドラム・ベース・ボーカルとの噛み合わせを見る練習。","練習ポイント":"前提は「オルタナリフ・コードワーク」。まずはテンポを落として、壁になる「構成とキメ」を1つずつ潰す。","壁":"構成とキメ","次候補":"","習得スキル":"変則リフ・アンサンブル","必須スキル":"オルタナリフ・コードワーク","アーティスト":"ZAZEN BOYS","参考動画URL":"","演奏難易度":8,"エチュード適性":4,"ジャンル定番度":3},{"No":76,"曲名":"笑ってたいんだ","Lv":4,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"笑ってたいんだはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ」。まずはテンポを落として、壁になる「歌を支える」を1つずつ潰す。","壁":"歌を支える","次候補":"","習得スキル":"ポップスバッキング・バンドアンサンブル","必須スキル":"コードチェンジ","アーティスト":"いきものがかり","参考動画URL":"","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"No":77,"曲名":"ホットミルク","Lv":4,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ホットミルクはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ」。まずはテンポを落として、壁になる「音量バランス」を1つずつ潰す。","壁":"音量バランス","次候補":"","習得スキル":"ポップスバッキング・コードワーク","必須スキル":"コードチェンジ","アーティスト":"いきものがかり / 要確認","参考動画URL":"","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"No":78,"曲名":"自由へ道連れ","Lv":6,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"自由へ道連れはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「単音リフ・カッティング」。まずはテンポを落として、壁になる「事変系のキメ」を1つずつ潰す。","壁":"事変系のキメ","次候補":"修羅場","習得スキル":"コードワーク・リフ","必須スキル":"単音リフ・カッティング","アーティスト":"椎名林檎","参考動画URL":"","演奏難易度":6,"エチュード適性":5,"ジャンル定番度":3},{"No":79,"曲名":"ダイヤモンド","Lv":4,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ダイヤモンドはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「ローコード」。まずはテンポを落として、壁になる「歌伴の安定」を1つずつ潰す。","壁":"歌伴の安定","次候補":"","習得スキル":"ポップスバッキング","必須スキル":"ローコード","アーティスト":"要確認","参考動画URL":"","演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"No":80,"曲名":"colors","Lv":5,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"colorsはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・コードチェンジ」。まずはテンポを落として、壁になる「勢いと安定」を1つずつ潰す。","壁":"勢いと安定","次候補":"","習得スキル":"パワーポップバッキング","必須スキル":"パワーコード・コードチェンジ","アーティスト":"ハンブレッダーズ","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":81,"曲名":"ワールドイズマイン","Lv":5,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ワールドイズマインはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・コードチェンジ」。まずはテンポを落として、壁になる「疾走感」を1つずつ潰す。","壁":"疾走感","次候補":"","習得スキル":"パワーポップバッキング","必須スキル":"パワーコード・コードチェンジ","アーティスト":"ハンブレッダーズ","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":82,"曲名":"ファイナルボーイフレンド","Lv":5,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ファイナルボーイフレンドはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・コードチェンジ」。まずはテンポを落として、壁になる「リズムの密度」を1つずつ潰す。","壁":"リズムの密度","次候補":"","習得スキル":"パワーポップバッキング","必須スキル":"パワーコード・コードチェンジ","アーティスト":"ハンブレッダーズ","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":83,"曲名":"再生","Lv":5,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"再生はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・コードチェンジ」。まずはテンポを落として、壁になる「曲の展開」を1つずつ潰す。","壁":"曲の展開","次候補":"","習得スキル":"パワーポップバッキング","必須スキル":"パワーコード・コードチェンジ","アーティスト":"ハンブレッダーズ","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":84,"曲名":"タイムマシンにお願い","Lv":5,"主スキル":"コードワーク","推奨ルート":"未分類","一言説明":"タイムマシンにお願いはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「ローコード・カッティング」。まずはテンポを落として、壁になる「ノリとアンサンブル」を1つずつ潰す。","壁":"ノリとアンサンブル","次候補":"","習得スキル":"ファンク/ロックンロールバッキング","必須スキル":"ローコード・カッティング","アーティスト":"サディスティック・ミカ・バンド","参考動画URL":"","演奏難易度":5,"エチュード適性":5,"ジャンル定番度":1},{"No":85,"曲名":"キャンディハウス","Lv":5,"主スキル":"オルタナリフ","推奨ルート":"未分類","一言説明":"キャンディハウスはオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「単音リフ・コードワーク」。まずはテンポを落として、壁になる「荒さとキレ」を1つずつ潰す。","壁":"荒さとキレ","次候補":"","習得スキル":"ガレージロックリフ","必須スキル":"単音リフ・コードワーク","アーティスト":"THEE MICHELLE GUN ELEPHANT","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":1},{"No":86,"曲名":"ぶきっちょ","Lv":5,"主スキル":"コードワーク","推奨ルート":"未分類","一言説明":"ぶきっちょはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ」。まずはテンポを落として、壁になる「曲展開」を1つずつ潰す。","壁":"曲展開","次候補":"","習得スキル":"コードワーク・アンサンブル","必須スキル":"コードチェンジ","アーティスト":"要確認","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":1},{"No":87,"曲名":"白く巨大で","Lv":6,"主スキル":"オルタナリフ","推奨ルート":"未分類","一言説明":"白く巨大ではオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「単音リフ・アンサンブル」。まずはテンポを落として、壁になる「空間と音量」を1つずつ潰す。","壁":"空間と音量","次候補":"","習得スキル":"オルタナリフ・アンサンブル","必須スキル":"単音リフ・アンサンブル","アーティスト":"要確認","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":1},{"No":88,"曲名":"Planet Home","Lv":6,"主スキル":"コードワーク","推奨ルート":"未分類","一言説明":"Planet Homeはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードワーク・アンサンブル」。まずはテンポを落として、壁になる「曲調の作り方」を1つずつ潰す。","壁":"曲調の作り方","次候補":"","習得スキル":"コードワーク・アンサンブル","必須スキル":"コードワーク・アンサンブル","アーティスト":"要確認","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":1},{"No":89,"曲名":"First Good Bye","Lv":5,"主スキル":"コードワーク","推奨ルート":"アニソン/ボカロ","一言説明":"First Good Byeはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ」。まずはテンポを落として、壁になる「歌メロとの絡み」を1つずつ潰す。","壁":"歌メロとの絡み","次候補":"","習得スキル":"コードワーク・ポップスバッキング","必須スキル":"コードチェンジ","アーティスト":"涼宮ハルヒ（平野綾）","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":90,"曲名":"Catfish Blues","Lv":7,"主スキル":"ブルースフレーズ","推奨ルート":"ブルース","一言説明":"Catfish Bluesはブルースフレーズを伸ばす課題曲。ロックギターの語彙を増やす入口。チョーキング・間・ニュアンスが大事。","練習ポイント":"前提は「ペンタ・シャッフル」。まずはテンポを落として、壁になる「間とニュアンス」を1つずつ潰す。","壁":"間とニュアンス","次候補":"Little Wing","習得スキル":"ブルースフレーズ・アドリブ","必須スキル":"ペンタ・シャッフル","アーティスト":"ブルース・スタンダード","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":91,"曲名":"歌舞伎","Lv":7,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"歌舞伎はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードカッティング・アンサンブル」。まずはテンポを落として、壁になる「キメの多さ」を1つずつ潰す。","壁":"キメの多さ","次候補":"","習得スキル":"東京事変系コードワーク・キメ","必須スキル":"コードカッティング・アンサンブル","アーティスト":"東京事変","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":92,"曲名":"怒りをくれよ","Lv":6,"主スキル":"アンサンブル","推奨ルート":"邦ロック定番","一言説明":"怒りをくれよはアンサンブルを伸ばす課題曲。自分だけで完結せず、ドラム・ベース・ボーカルとの噛み合わせを見る練習。","練習ポイント":"前提は「コードワーク・歪み」。まずはテンポを落として、壁になる「勢いと同期」を1つずつ潰す。","壁":"勢いと同期","次候補":"","習得スキル":"ロックバッキング・アンサンブル","必須スキル":"コードワーク・歪み","アーティスト":"GLIM SPANKY","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":4},{"No":93,"曲名":"修羅場","Lv":7,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"修羅場はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードワーク・カッティング」。まずはテンポを落として、壁になる「コード感とリズム」を1つずつ潰す。","壁":"コード感とリズム","次候補":"透明人間","習得スキル":"東京事変系コードワーク","必須スキル":"コードワーク・カッティング","アーティスト":"東京事変","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":94,"曲名":"Allright","Lv":6,"主スキル":"アンサンブル","推奨ルート":"邦ロック定番","一言説明":"Allrightはアンサンブルを伸ばす課題曲。自分だけで完結せず、ドラム・ベース・ボーカルとの噛み合わせを見る練習。","練習ポイント":"前提は「コードワーク」。まずはテンポを落として、壁になる「バンドの一体感」を1つずつ潰す。","壁":"バンドの一体感","次候補":"","習得スキル":"ロックバッキング・アンサンブル","必須スキル":"コードワーク","アーティスト":"要確認","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":4},{"No":95,"曲名":"If I Ain't Got You","Lv":7,"主スキル":"コードワーク","推奨ルート":"R&B/フュージョン","一言説明":"If I Ain't Got Youはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「バレーコード・テンション」。まずはテンポを落として、壁になる「歌を邪魔しない」を1つずつ潰す。","壁":"歌を邪魔しない","次候補":"Just the Two of Us","習得スキル":"R&Bコードワーク・歌伴","必須スキル":"バレーコード・テンション","アーティスト":"Alicia Keys","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":96,"曲名":"ボーイフレンド","Lv":5,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ボーイフレンドはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ」。まずはテンポを落として、壁になる「音量バランス」を1つずつ潰す。","壁":"音量バランス","次候補":"","習得スキル":"ポップスバッキング・歌伴","必須スキル":"コードチェンジ","アーティスト":"aiko","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":97,"曲名":"Just the Two of Us","Lv":8,"主スキル":"コードワーク","推奨ルート":"R&B/フュージョン","一言説明":"Just the Two of Usはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「テンションコード・グルーヴ」。まずはテンポを落として、壁になる「コードの響き」を1つずつ潰す。","壁":"コードの響き","次候補":"Isn't She Lovely","習得スキル":"R&B/ジャズコードワーク","必須スキル":"テンションコード・グルーヴ","アーティスト":"Grover Washington Jr. feat. Bill Withers","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"No":98,"曲名":"三日月","Lv":5,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"三日月はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「ローコード・アルペジオ」。まずはテンポを落として、壁になる「音量と間」を1つずつ潰す。","壁":"音量と間","次候補":"","習得スキル":"バラード伴奏","必須スキル":"ローコード・アルペジオ","アーティスト":"絢香","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":99,"曲名":"透明人間","Lv":7,"主スキル":"コードカッティング","推奨ルート":"東京事変/オルタナ","一言説明":"透明人間はコードカッティングを伸ばす課題曲。左手ミュートとアクセントでリズムを作る。軽音で一気に上手く見える領域。","練習ポイント":"前提は「コードワーク・アンサンブル」。まずはテンポを落として、壁になる「キメとグルーヴ」を1つずつ潰す。","壁":"キメとグルーヴ","次候補":"OSCA","習得スキル":"東京事変系コードワーク・カッティング","必須スキル":"コードワーク・アンサンブル","アーティスト":"東京事変","参考動画URL":"","演奏難易度":7,"エチュード適性":5,"ジャンル定番度":3},{"No":100,"曲名":"Isn't She Lovely","Lv":8,"主スキル":"セッション","推奨ルート":"R&B/フュージョン","一言説明":"Isn't She Lovelyはセッションを伸ばす課題曲。セッションを中心に伸ばす課題曲。","練習ポイント":"前提は「コードワーク・ブルース」。まずはテンポを落として、壁になる「コード進行上の対応」を1つずつ潰す。","壁":"コード進行上の対応","次候補":"宝島","習得スキル":"ジャズ/R&Bコードワーク・セッション","必須スキル":"コードワーク・ブルース","アーティスト":"Stevie Wonder","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"No":101,"曲名":"OSCA","Lv":7,"主スキル":"オルタナリフ","推奨ルート":"東京事変/オルタナ","一言説明":"OSCAはオルタナリフを伸ばす課題曲。変則的なリフやキメで曲を引っ張る練習。音作りとアンサンブルが重要。","練習ポイント":"前提は「コードワーク・アンサンブル」。まずはテンポを落として、壁になる「キメと音作り」を1つずつ潰す。","壁":"キメと音作り","次候補":"電波通信","習得スキル":"東京事変系リフ・アンサンブル","必須スキル":"コードワーク・アンサンブル","アーティスト":"東京事変","参考動画URL":"","演奏難易度":7,"エチュード適性":4,"ジャンル定番度":3},{"No":102,"曲名":"電波通信","Lv":8,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"電波通信はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードカッティング・アンサンブル」。まずはテンポを落として、壁になる「情報量の多さ」を1つずつ潰す。","壁":"情報量の多さ","次候補":"Honnoji","習得スキル":"東京事変系コードワーク・高速キメ","必須スキル":"コードカッティング・アンサンブル","アーティスト":"東京事変","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"No":103,"曲名":"落日","Lv":6,"主スキル":"コードワーク","推奨ルート":"東京事変/オルタナ","一言説明":"落日はコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「コードチェンジ・アルペジオ」。まずはテンポを落として、壁になる「間と音量」を1つずつ潰す。","壁":"間と音量","次候補":"","習得スキル":"バラードコードワーク","必須スキル":"コードチェンジ・アルペジオ","アーティスト":"東京事変","参考動画URL":"","演奏難易度":6,"エチュード適性":4,"ジャンル定番度":3},{"No":104,"曲名":"Lost My Music","Lv":5,"主スキル":"コードワーク","推奨ルート":"アニソン/ボカロ","一言説明":"Lost My Musicはコードワークを伸ばす課題曲。ただコードを押さえるだけでなく、装飾・リズム・音価で曲を動かす練習。","練習ポイント":"前提は「パワーコード・単音リフ」。まずはテンポを落として、壁になる「曲全体の勢い」を1つずつ潰す。","壁":"曲全体の勢い","次候補":"","習得スキル":"アニソンロックバッキング","必須スキル":"パワーコード・単音リフ","アーティスト":"涼宮ハルヒ（平野綾）","参考動画URL":"","演奏難易度":5,"エチュード適性":4,"ジャンル定番度":4},{"No":105,"曲名":"Säkkijärven Polkka","Lv":8,"主スキル":"高速フレーズ","推奨ルート":"R&B/フュージョン","一言説明":"Säkkijärven Polkkaは高速フレーズを伸ばす課題曲。速い単音を粒立ちよく弾く練習。力みを減らすことが最優先。","練習ポイント":"前提は「単音リフ・オルタネイト」。まずはテンポを落として、壁になる「持久力と粒立ち」を1つずつ潰す。","壁":"持久力と粒立ち","次候補":"","習得スキル":"高速メロディ・民族音楽系フレーズ","必須スキル":"単音リフ・オルタネイト","アーティスト":"フィンランド民謡 / 要確認","参考動画URL":"","演奏難易度":8,"エチュード適性":5,"ジャンル定番度":3},{"曲名":"明日も","Lv":2,"主スキル":"コードストローク","推奨ルート":"邦ロック定番","一言説明":"新人ライブ適性が高い定番邦ロック。まずはコードストロークで曲を止めずに通す練習に向く。","練習ポイント":"右手のストロークを安定させ、歌を支える音量バランスを意識する。","壁":"ストロークの安定","次候補":"チェリボム","習得スキル":"コードストローク・バンド入門","必須スキル":"コードチェンジ・8ビート","アーティスト":"SHISHAMO","参考動画URL":"","コメント":"かなり良い。新人ライブ適性高い","技術メモ":"コードストローク","No":106,"演奏難易度":2,"エチュード適性":3,"ジャンル定番度":5},{"曲名":"洗濯機と君とラヂオ","Lv":4,"主スキル":"ブリッジミュート","推奨ルート":"邦ロック定番","一言説明":"まかえん枠として使いやすいポップロック。ブリッジミュートとコードカッティングを練習できる。","練習ポイント":"ミュートの粒を揃えつつ、コードカッティング部分でリズムを前に出す。","壁":"ミュートとカッティングの切替","次候補":"高嶺の花子さん","習得スキル":"ブリッジミュート・コードカッティング","必須スキル":"パワーコード・8ビート","アーティスト":"マカロニえんぴつ","参考動画URL":"","コメント":"まかえん枠ならこれアリ","技術メモ":"ブリッジミュート、コードカッティング","No":107,"演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"HE IS MINE","Lv":4,"主スキル":"単音カッティング","推奨ルート":"邦ロック定番","一言説明":"盛り上がりやすい邦ロック曲。リードと単音カッティングでギターの存在感を出せる。","練習ポイント":"単音のキレと休符を意識して、歌のテンションを邪魔しない。","壁":"単音カッティングのキレ","次候補":"テレキャスター・ストライプ","習得スキル":"リード・単音カッティング","必須スキル":"単音リフ・左手ミュート","アーティスト":"クリープハイプ","参考動画URL":"","コメント":"盛り上がる。Vo次第で強い","技術メモ":"リード、単音カッティング","No":108,"演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"サイハテアイニ","Lv":4,"主スキル":"コードストローク","推奨ルート":"邦ロック定番","一言説明":"RADWIMPS枠としてちょうどいい邦ロック曲。コードストロークを中心に、リードにも挑戦できる。","練習ポイント":"バッキングを安定させ、リードはテンポを落として粒を揃える。","壁":"リードの難易度","次候補":"天体観測","習得スキル":"コードストローク・リード入門","必須スキル":"コードチェンジ・単音リフ","アーティスト":"RADWIMPS","参考動画URL":"","コメント":"RAD枠としてちょうどよさそう","技術メモ":"コードストローク、リードはちょっとむずい","No":109,"演奏難易度":4,"エチュード適性":3,"ジャンル定番度":4},{"曲名":"青い春","Lv":4,"主スキル":"オクターブ奏法","推奨ルート":"邦ロック定番","一言説明":"男声邦ロック枠として使いやすい。オクターブ奏法とコードストロークを練習できる。","練習ポイント":"オクターブ移動時のミュートと、サビのストロークの勢いを両立する。","壁":"オクターブ移動の安定","次候補":"Re:Re:","習得スキル":"オクターブ奏法・コードストローク","必須スキル":"パワーコード・単音リフ","アーティスト":"SUPER BEAVER","参考動画URL":"","コメント":"男声邦ロック枠で良い","技術メモ":"オクターブ奏法、コードストローク","No":110,"演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"花束","Lv":1,"主スキル":"コードストローク","推奨ルート":"邦ロック定番","一言説明":"定番J-pop寄りの歌もの。コードストロークが中心で、初心者でもかなり取り組みやすい。","練習ポイント":"コードチェンジと歌を支える音量を安定させる。","壁":"コードチェンジの安定","次候補":"若者のすべて","習得スキル":"コードストローク・歌伴","必須スキル":"ローコード","アーティスト":"back number","参考動画URL":"","コメント":"定番J-pop寄り、Vo向け","技術メモ":"コードストローク、がちかんたん","No":111,"演奏難易度":1,"エチュード適性":2,"ジャンル定番度":5},{"曲名":"高嶺の花子さん","Lv":3,"主スキル":"付点8分ディレイ","推奨ルート":"邦ロック定番","一言説明":"知名度が高く、ライブで使いやすい曲。付点8分ディレイの入口にもなる。","練習ポイント":"ディレイのタイミングをクリックに合わせ、コードの入りをずらさない。","壁":"ディレイとの同期","次候補":"CQCQ","習得スキル":"付点8分ディレイ・コードワーク","必須スキル":"コードストローク・テンポキープ","アーティスト":"back number","参考動画URL":"","コメント":"知名度高い。かなり強い","技術メモ":"付点8分ディレイ","No":112,"演奏難易度":3,"エチュード適性":3,"ジャンル定番度":5},{"曲名":"大不正解","Lv":3,"主スキル":"低音単音リフ","推奨ルート":"邦ロック定番","一言説明":"バンド映えするback number枠。低音単音リフの練習曲として使える。","練習ポイント":"低音弦のリフを太く、リズムを前に出して弾く。","壁":"低音リフのノリ","次候補":"イケナイ太陽","習得スキル":"低音単音リフ・ロックバッキング","必須スキル":"単音リフ・ピッキング","アーティスト":"back number","参考動画URL":"","コメント":"バンド映えする","技術メモ":"低音単音リフ","No":113,"演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"なんでもねだり","Lv":2,"主スキル":"単音フレーズ","推奨ルート":"邦ロック定番","一言説明":"KANA-BOONらしい単音フレーズの入口。比較的かんたんめで新人にも出しやすい。","練習ポイント":"単音フレーズのリズムと音価を揃える。","壁":"単音の粒立ち","次候補":"ないものねだり","習得スキル":"単音フレーズ・邦ロックリフ","必須スキル":"ピッキング","アーティスト":"KANA-BOON","参考動画URL":"","コメント":"","技術メモ":"単音フレーズ、かんたんめ","No":114,"演奏難易度":2,"エチュード適性":3,"ジャンル定番度":4},{"曲名":"ないものねだり","Lv":3,"主スキル":"デジタルディレイ","推奨ルート":"邦ロック定番","一言説明":"新人向け最強格の邦ロック定番。ちょっとしたデジタルディレイ系フレーズも学べる。","練習ポイント":"リフのタイミングとディレイの残り方を意識する。","壁":"リフと空間系の同期","次候補":"Re:Re:","習得スキル":"単音フレーズ・デジタルディレイ","必須スキル":"単音リフ・テンポキープ","アーティスト":"KANA-BOON","参考動画URL":"","コメント":"新人向け最強格","技術メモ":"ちょっとしたデジタルディレイフレーズ","No":115,"演奏難易度":3,"エチュード適性":4,"ジャンル定番度":5},{"曲名":"Re:Re:","Lv":3,"主スキル":"単音フレーズ","推奨ルート":"邦ロック定番","一言説明":"アジカン枠として入れやすい定番。単音フレーズの練習に向く。","練習ポイント":"リフを焦らず、ピッキングと左手のタイミングを合わせる。","壁":"単音フレーズの安定","次候補":"転がる岩、君に朝が降る","習得スキル":"単音フレーズ・邦ロックリフ","必須スキル":"ピッキング・単音リフ","アーティスト":"ASIAN KUNG-FU GENERATION","参考動画URL":"","コメント":"アジカン枠で良い","技術メモ":"単音フレーズかんたんめ","No":116,"演奏難易度":3,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"転がる岩、君に朝が降る","Lv":3,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"ぼざろ経由でも刺さるアジカン曲。コードとリードの両方に触れられる。","練習ポイント":"コードを安定させつつ、リードの入りでリズムを崩さない。","壁":"コードとリードの切替","次候補":"若者のすべて","習得スキル":"コードワーク・リード入門","必須スキル":"コードチェンジ・単音リフ","アーティスト":"ASIAN KUNG-FU GENERATION","参考動画URL":"","コメント":"ぼざろ経由でも刺さる","技術メモ":"コード、リードもぼちぼちかんたん","No":117,"演奏難易度":3,"エチュード適性":3,"ジャンル定番度":4},{"曲名":"天体観測","Lv":2,"主スキル":"単音リフ","推奨ルート":"邦ロック定番","一言説明":"ド定番で優先度高め。イントロリフが練習曲としてかなり優秀。","練習ポイント":"イントロリフを粒立ちよく、曲全体は勢いを落とさず弾く。","壁":"リフの安定","次候補":"サイハテアイニ","習得スキル":"単音リフ・邦ロック定番","必須スキル":"ピッキング","アーティスト":"BUMP OF CHICKEN","参考動画URL":"","コメント":"ド定番。これは入れる","技術メモ":"リフとして優秀、優先度高め","No":118,"演奏難易度":2,"エチュード適性":5,"ジャンル定番度":5},{"曲名":"若者のすべて","Lv":2,"主スキル":"コードストローク","推奨ルート":"邦ロック定番","一言説明":"エモい定番枠。弾き語りにもバンドにも展開しやすい。","練習ポイント":"コードを丁寧に鳴らし、歌の邪魔をしない間を作る。","壁":"歌伴の間","次候補":"花束","習得スキル":"コードストローク・歌伴","必須スキル":"ローコード・コードチェンジ","アーティスト":"フジファブリック","参考動画URL":"","コメント":"エモい定番枠","技術メモ":"コード、弾き語りとして優秀かも","No":119,"演奏難易度":2,"エチュード適性":2,"ジャンル定番度":5},{"曲名":"チェリボム","Lv":4,"主スキル":"ブリッジミュート","推奨ルート":"邦ロック定番","一言説明":"女子Vo/ポップロック枠。コードと速めのブリッジミュートが練習できる。","練習ポイント":"テンポに置いていかれないよう、右手のミュートを軽く保つ。","壁":"速いブリッジミュート","次候補":"明日も","習得スキル":"コードワーク・ブリッジミュート","必須スキル":"パワーコード・コードチェンジ","アーティスト":"SILENT SIREN","参考動画URL":"","コメント":"女子Vo/ポップロック枠で良い","技術メモ":"コード、ブリッジミュートはやい、コード多い。ちょっとむずめかも","No":120,"演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"イケナイ太陽","Lv":3,"主スキル":"単音リフ","推奨ルート":"邦ロック定番","一言説明":"新人ライブで盛り上がりやすい曲。単音リフ、コード、プリング/ハンマリングに触れられる。","練習ポイント":"イントロやリフを勢いよく弾き、細かい装飾で力まない。","壁":"リフと装飾の切替","次候補":"あつまれ！パーティーピーポー","習得スキル":"単音リフ・コードワーク・レガート","必須スキル":"単音リフ・コードチェンジ","アーティスト":"ORANGE RANGE","参考動画URL":"","コメント":"新人ライブで盛り上がる","技術メモ":"単音リフ、コード、プリング/ハンマリング","No":121,"演奏難易度":3,"エチュード適性":4,"ジャンル定番度":5},{"曲名":"MONSTER DANCE","Lv":4,"主スキル":"単音リフ","推奨ルート":"邦ロック定番","一言説明":"盛り上げ枠。テンポと勢いが重要で、チョーキングも少し難しい。","練習ポイント":"テンポを落として単音リフを確認し、チョーキングの音程を合わせる。","壁":"テンポとチョーキング","次候補":"場違いハミングバード","習得スキル":"単音リフ・チョーキング","必須スキル":"単音リフ・ピッキング","アーティスト":"KEYTALK","参考動画URL":"","コメント":"盛り上げ枠。ただテンポ注意","技術メモ":"単音リフ、チョーキングちょっと難易度高い","No":122,"演奏難易度":4,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"勝手にシンドバッド","Lv":4,"主スキル":"アンサンブル","推奨ルート":"邦ロック定番","一言説明":"盛り上がるが編成次第。バンド全体でノリを作る曲。","練習ポイント":"ギター単体よりも、全体のキメとノリを合わせる。","壁":"編成とアンサンブル","次候補":"","習得スキル":"アンサンブル・盛り上げ曲","必須スキル":"コードワーク・テンポキープ","アーティスト":"サザンオールスターズ","参考動画URL":"","コメント":"盛り上がるけど編成次第","技術メモ":"要確認","No":123,"演奏難易度":4,"エチュード適性":2,"ジャンル定番度":5},{"曲名":"場違いハミングバード","Lv":4,"主スキル":"単音リフ","推奨ルート":"邦ロック定番","一言説明":"ユニゾン枠として良い。リフが優秀で、比較的取り組みやすい。","練習ポイント":"リフの粒とノリを保って、歌の裏でも走らないようにする。","壁":"リフのノリ","次候補":"Mix Juiceのいうとおり","習得スキル":"単音リフ・邦ロックリフ","必須スキル":"単音リフ・ピッキング","アーティスト":"UNISON SQUARE GARDEN","参考動画URL":"","コメント":"これも良い。やや中級","技術メモ":"リフが優秀、簡単","No":124,"演奏難易度":4,"エチュード適性":4,"ジャンル定番度":3},{"曲名":"innocent world","Lv":3,"主スキル":"単音リフ","推奨ルート":"邦ロック定番","一言説明":"J-pop定番として強い。単音リフやスライドの練習になる。","練習ポイント":"スライドの入りとリフの歌わせ方を丁寧にする。","壁":"スライドのニュアンス","次候補":"若者のすべて","習得スキル":"単音リフ・スライド","必須スキル":"単音リフ・コードチェンジ","アーティスト":"Mr.Children","参考動画URL":"","コメント":"J-pop定番として強い","技術メモ":"単音リフ、スライドなど","No":125,"演奏難易度":3,"エチュード適性":3,"ジャンル定番度":5},{"曲名":"あつまれ！パーティーピーポー","Lv":2,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"盛り上げ枠。パワーコード中心で、練習曲としても優秀。","練習ポイント":"勢いを出しつつ、雑にノイズを出しすぎない。","壁":"勢いとミュート","次候補":"イケナイ太陽","習得スキル":"パワーコード・盛り上げ曲","必須スキル":"パワーコード・8ビート","アーティスト":"ヤバイTシャツ屋さん","参考動画URL":"","コメント":"盛り上げ枠。ノリ重視","技術メモ":"パワーコード、簡単、練習曲として優秀","No":126,"演奏難易度":2,"エチュード適性":4,"ジャンル定番度":4},{"曲名":"透明水曜日","Lv":3,"主スキル":"コードワーク","推奨ルート":"邦ロック定番","一言説明":"透明感ポップ枠。コード中心で比較的かんたんめ。","練習ポイント":"コードの響きと空気感を崩さないように、音量を抑えて丁寧に弾く。","壁":"音量と雰囲気作り","次候補":"1999","習得スキル":"コードワーク・透明感ポップ","必須スキル":"コードチェンジ","アーティスト":"NOMELON NOLEMON","参考動画URL":"","コメント":"透明感ポップ枠","技術メモ":"コード、かんたんめ","No":127,"演奏難易度":3,"エチュード適性":2,"ジャンル定番度":2},{"曲名":"ロマンス","Lv":2,"主スキル":"パワーコード","推奨ルート":"邦ロック定番","一言説明":"雰囲気系として良い。パワーコード中心で、練習曲としても使いやすい。","練習ポイント":"シンプルなコードで音価と空気感を作る。","壁":"音価の管理","次候補":"1999","習得スキル":"パワーコード・雰囲気作り","必須スキル":"パワーコード・テンポキープ","アーティスト":"羊文学","参考動画URL":"","コメント":"いい。雰囲気系","技術メモ":"パワーコード、簡単、練習曲として優秀","No":128,"演奏難易度":2,"エチュード適性":3,"ジャンル定番度":3},{"曲名":"1999","Lv":3,"主スキル":"リバーブ","推奨ルート":"邦ロック定番","一言説明":"ギター希望にも合う雰囲気系。リバーブを使った音作りを学べる。","練習ポイント":"弾きすぎず、リバーブの余韻を活かして空間を作る。","壁":"音作りと余韻","次候補":"透明水曜日","習得スキル":"リバーブ・雰囲気作り","必須スキル":"コードワーク・音量コントロール","アーティスト":"羊文学","参考動画URL":"","コメント":"これも良い。Gt希望にも合う","技術メモ":"リバーブの雰囲気を学ぶのあり","No":129,"演奏難易度":3,"エチュード適性":2,"ジャンル定番度":3}]</script>
+<script>
+const FORCE_EMBEDDED = false;
+const DATA_KEY = "guitarQuestDatabaseSongs.v2.threeAxis";
+const baseSongs = JSON.parse(document.getElementById("initialData").textContent).map(validateSong);
+let songs = loadSongs();
+let currentRoute = "all";
+let currentSkill = "all";
+let selected = new Set();
+let pending = new Set();
+let editorMode = false;
+let saveTimer = null;
+const ROUTE_OPTIONS = ["邦ロック定番","J-pop","けいおん","アニソン/ボカロ","洋楽ロック","カッティング/ファンク","ブルース","東京事変/オルタナ","R&B/フュージョン","ラウド","未分類"];
+
+function loadSongs() {
+  if (!FORCE_EMBEDDED) {
+    try {
+      const saved = localStorage.getItem(DATA_KEY);
+      if (saved) return JSON.parse(saved).map(validateSong);
+    } catch(e) { console.warn(e); }
+  }
+  return structuredClone(baseSongs).map(validateSong);
+}
+function persist() {
+  songs.forEach((s,i)=>{ s.No = i+1; });
+  localStorage.setItem(DATA_KEY, JSON.stringify(songs));
+  showToast("保存した");
+}
+function autoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{ persist(); renderAll(); }, 350);
+}
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1300);
+}
+function skillParts(s) {
+  if (!s) return [];
+  return String(s).split(/[・、,\/]/).map(x=>x.trim()).filter(Boolean);
+}
+function normSkill(s) {
+  const map = {
+    "パワーコードリフ":"パワーコード",
+    "コードカッティングリフ":"コードカッティング",
+    "カッティングリフ":"カッティング",
+    "ローコードリフ":"ローコード",
+    "低音単音リフ":"低音リフ",
+    "ハンマリング・プリング":"レガート",
+    "高速単音フレーズ":"高速フレーズ",
+    "ハイゲイン":"深い歪み"
+  };
+  return map[s] || s;
+}
+function routes() {
+  return [...new Set(songs.map(s=>s["推奨ルート"]).filter(Boolean))].sort();
+}
+function selectedSongs() { return songs.filter(s => selected.has(s["曲名"])); }
+function learnedSkills() {
+  const skills = new Set();
+  selectedSongs().forEach(s => {
+    skillParts(s["主スキル"]).forEach(x => skills.add(normSkill(x)));
+    skillParts(s["習得スキル"] || "").forEach(x => skills.add(normSkill(x)));
+  });
+  return [...skills].sort();
+}
+
+function clampNumber(v, min, max, fallback=min) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+function songDifficulty(song) { return clampNumber(song["演奏難易度"] ?? song["Lv"], 1, 10, 1); }
+function etudeRating(song) { return clampNumber(song["エチュード適性"], 1, 5, 3); }
+function classicRating(song) { return clampNumber(song["ジャンル定番度"], 1, 5, 3); }
+function stars(n) { n = clampNumber(n, 1, 5, 1); return "★".repeat(n) + "☆".repeat(5-n); }
+function ratingGrid(song) {
+  return `<div class="rating-grid" title="演奏難易度 / エチュード適性 / ジャンル定番度">
+    <div class="rating-pill"><span>演奏難易度</span><b>Lv${escapeHtml(songDifficulty(song))}</b></div>
+    <div class="rating-pill"><span>練習曲度</span><b class="stars">${stars(etudeRating(song))}</b></div>
+    <div class="rating-pill"><span>定番度</span><b class="stars">${stars(classicRating(song))}</b></div>
+  </div>`;
+}
+function miniRating(song) {
+  return `<div class="mini-rating"><span>難 Lv${escapeHtml(songDifficulty(song))}</span><span>練 ${escapeHtml(etudeRating(song))}/5</span><span>定 ${escapeHtml(classicRating(song))}/5</span></div>`;
+}
+
+function recommendationScore(song, learned, sel) {
+  if (selected.has(song["曲名"])) return -999;
+  const maxLv = sel.length ? Math.max(...sel.map(s=>songDifficulty(s))) : 1;
+  let score = 0;
+  const lv = songDifficulty(song);
+  if (lv >= maxLv && lv <= maxLv + 2) score += 5;
+  if (lv === maxLv + 1) score += 3;
+  if (lv > maxLv + 3) score -= 6;
+  const parts = skillParts(song["主スキル"]).map(normSkill);
+  if (parts.some(p => !learned.includes(p))) score += 4;
+  if (sel.some(s => s["推奨ルート"] === song["推奨ルート"])) score += 3;
+  if ([...selected].some(name => songs.find(s=>s["曲名"]===name)?.["次候補"] === song["曲名"])) score += 8;
+  score += (etudeRating(song) - 3) * 1.2;
+  score += (classicRating(song) - 3) * 0.35;
+  score += Math.max(0, 8 - lv) * 0.15;
+  return score;
+}
+
+function routeClass(route) {
+  const r = String(route || "未分類");
+  if (r.includes("邦ロック定番")) return "r-hougaku";
+  if (r.includes("初心者")) return "r-rock";
+  if (r.includes("けいおん")) return "r-keion";
+  if (r.includes("J-pop") || r.includes("J-POP") || r.includes("Jポップ") || r.includes("邦楽ポップ")) return "r-jpop";
+  if (r.includes("アニソン") || r.includes("ボカロ")) return "r-anison";
+  if (r.includes("洋楽")) return "r-yogaku";
+  if (r.includes("カッティング") || r.includes("ファンク")) return "r-funk";
+  if (r.includes("ブルース")) return "r-blues";
+  if (r.includes("東京事変") || r.includes("オルタナ")) return "r-alt";
+  if (r.includes("R&B") || r.includes("セッション") || r.includes("フュージョン")) return "r-rnb";
+  if (r.includes("ラウド") || r.includes("ドロップD")) return "r-loud";
+  if (r.includes("東方") || r.includes("テクニカル")) return "r-technical";
+  return "r-other";
+}
+function routeBadge(route) {
+  return `<span class="route-badge ${routeClass(route)}">${escapeHtml(route || "未分類")}</span>`;
+}
+
+function searchQuery(song) {
+  return encodeURIComponent(`${song["曲名"] || ""} ${song["アーティスト"] || ""}`.trim());
+}
+function musicLinks(song) {
+  const q = searchQuery(song);
+  if (!q) return "";
+  return `<div class="music-links">
+    <a href="https://open.spotify.com/search/${q}" target="_blank" rel="noopener">Spotify</a>
+    <a href="https://music.apple.com/jp/search?term=${q}" target="_blank" rel="noopener">Apple Music</a>
+    <a href="https://music.youtube.com/search?q=${q}" target="_blank" rel="noopener">YouTube Music</a>
+    <a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">YouTube</a>
+  </div>`;
+}
+function allRouteOptions() {
+  return [...new Set([...ROUTE_OPTIONS, ...routes()])].filter(Boolean);
+}
+
+function renderRoutes() {
+  const rs = routes();
+  const btns = document.getElementById("routeButtons");
+  if (btns) {
+    btns.innerHTML = "";
+    rs.forEach(r => {
+      const b = document.createElement("button");
+      b.textContent = r;
+      b.className = "route-btn " + routeClass(r);
+      b.dataset.route = r;
+      b.onclick = () => { currentRoute=r; document.querySelectorAll("button[data-route]").forEach(x=>x.classList.toggle("active", x.dataset.route===r)); renderSongs(); };
+      btns.appendChild(b);
+    });
+    const all = document.querySelector('button[data-route="all"]');
+    if (all) all.onclick = () => { currentRoute="all"; document.querySelectorAll("button[data-route]").forEach(x=>x.classList.toggle("active", x.dataset.route==="all")); renderSongs(); };
+  }
+  const cards = document.getElementById("routeCards");
+  if (cards) {
+    cards.innerHTML = "";
+    rs.forEach(r => {
+      const list = songs.filter(s=>s["推奨ルート"]===r).sort((a,b)=>songDifficulty(a)-songDifficulty(b));
+      const div = document.createElement("div");
+      div.className = "route-card " + routeClass(r);
+      div.innerHTML = `<b>${escapeHtml(r)}</b><div class="small">${list.length}曲 / 難易度 Lv ${Math.min(...list.map(s=>songDifficulty(s)))}〜${Math.max(...list.map(s=>songDifficulty(s)))}</div><div class="bar"><span style="width:${Math.min(100,list.length*7)}%"></span></div>`;
+      div.onclick = () => { currentRoute=r; document.querySelectorAll("button[data-route]").forEach(x=>x.classList.toggle("active", x.dataset.route===r)); renderSongs(); };
+      cards.appendChild(div);
+    });
+  }
+}
+function getRefUrl(song) { return song["参考動画URL"] || ""; }
+function setRefUrl(song, value) { song["参考動画URL"] = value.trim(); autoSave(); }
+function renderSongs() {
+  const q = (document.getElementById("search")?.value || "").toLowerCase();
+  const list = document.getElementById("songList");
+  if (!list) return;
+  list.innerHTML = "";
+  const filtered = songs.filter(s => {
+    const routeOK = currentRoute==="all" || s["推奨ルート"]===currentRoute;
+    const songSkills = [
+      ...skillParts(s["主スキル"]).map(normSkill),
+      ...skillParts(s["習得スキル"] || "").map(normSkill)
+    ];
+    const skillOK = currentSkill==="all" || songSkills.includes(currentSkill);
+    const hay = [s["曲名"],s["アーティスト"],s["主スキル"],s["習得スキル"],s["推奨ルート"],s["壁"]].join(" ").toLowerCase();
+    return routeOK && skillOK && (!q || hay.includes(q));
+  });
+  if (!filtered.length) {
+    list.innerHTML = `<div class="notice">条件に合う曲がありません。検索語やルートを少しゆるめてみてください。</div>`;
+    return;
+  }
+  filtered.forEach(s => {
+    const name = s["曲名"];
+    const isRegistered = selected.has(name);
+    const isPending = pending.has(name);
+    const div = document.createElement("div");
+    div.className = "song collapsed " + routeClass(s["推奨ルート"]) + (isRegistered ? " registered" : "");
+    div.innerHTML = `<input type="checkbox" aria-label="${escapeAttr(s["曲名"])}をチェック" ${(isRegistered || isPending)?"checked":""} ${isRegistered?"disabled":""}>
+      <div class="song-main">
+        <button type="button" class="song-summary" aria-expanded="false" title="クリックで詳細を開閉">
+          <span class="chevron">▶</span>
+          <span class="song-title-text">${escapeHtml(s["曲名"])}${isRegistered ? '<span class="registered-mark">登録済み</span>' : ''}</span>
+          <span class="artist-inline">／ ${escapeHtml(s["アーティスト"] || "アーティスト未設定")}</span>
+        </button>
+        <div class="song-detail">
+          <div class="meta">${routeBadge(s["推奨ルート"])} <span style="margin-left:6px;">${escapeHtml(s["主スキル"] || "未設定")} / 壁: ${escapeHtml(s["壁"] || "未設定")}</span></div>
+          ${musicLinks(s)}
+        </div>
+      </div>
+      <div class="song-side"><div class="lv">難 Lv${escapeHtml(songDifficulty(s))}</div>${miniRating(s)}</div>`;
+    const cb = div.querySelector('input[type="checkbox"]');
+    cb.onchange = () => {
+      if (isRegistered) return;
+      if (cb.checked) pending.add(name); else pending.delete(name);
+      renderPendingCount();
+    };
+    const summary = div.querySelector(".song-summary");
+    summary.onclick = () => {
+      const expanded = !div.classList.contains("expanded");
+      div.classList.toggle("expanded", expanded);
+      div.classList.toggle("collapsed", !expanded);
+      summary.setAttribute("aria-expanded", expanded ? "true" : "false");
+    };
+    list.appendChild(div);
+  });
+}
+
+function renderSkillChips() {
+  const anchor = document.getElementById("routeButtons");
+  if (!anchor) return;
+  let box = document.getElementById("skillButtons");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "skillButtons";
+    box.className = "controls";
+    anchor.after(box);
+  }
+  const skills = [...new Set(songs.flatMap(s => [
+    ...skillParts(s["主スキル"]).map(normSkill),
+    ...skillParts(s["習得スキル"] || "").map(normSkill)
+  ]).filter(Boolean))].sort();
+  const makeBtn = (label, value) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.classList.toggle("active", currentSkill === value);
+    b.onclick = () => { currentSkill = value; renderSkillChips(); renderSongs(); };
+    return b;
+  };
+  box.innerHTML = "";
+  box.appendChild(makeBtn("全部のスキル", "all"));
+  skills.forEach(skill => box.appendChild(makeBtn(skill, skill)));
+}
+
+function ensureGlobalProgress() {
+  let box = document.getElementById("globalProgress");
+  if (box) return box;
+  box = document.createElement("div");
+  box.id = "globalProgress";
+  box.className = "global-progress viewer-only";
+  box.innerHTML = `<div class="global-progress-bar"><div id="globalProgressFill" class="global-progress-fill"></div></div>
+    <div id="globalProgressLabel" class="global-progress-label"></div>
+    <button id="registerBtn" class="primary" type="button">チェックした曲を登録</button>
+    <button id="clearPendingBtn" type="button">解除</button>`;
+  document.body.appendChild(box);
+  document.getElementById("registerBtn").onclick = registerPending;
+  document.getElementById("clearPendingBtn").onclick = clearPending;
+  return box;
+}
+function renderGlobalProgress() {
+  const box = ensureGlobalProgress();
+  const fill = document.getElementById("globalProgressFill");
+  const label = document.getElementById("globalProgressLabel");
+  const total = songs.length || 1;
+  const done = selected.size;
+  const starTotal = selectedSongs().reduce((sum, s) => sum + etudeRating(s), 0);
+  const pct = Math.min(100, Math.round(done / total * 100));
+  if (fill) fill.style.width = pct + "%";
+  if (label) label.innerHTML = `<b>登録 ${done}/${songs.length}曲</b><span>練習スター合計 ★${starTotal}</span>`;
+}
+
+function renderPendingCount() {
+  const el = document.getElementById("pendingCount");
+  const btn = document.getElementById("registerBtn");
+  const clear = document.getElementById("clearPendingBtn");
+  if (el) el.textContent = `チェック中 ${pending.size}曲`;
+  if (btn) {
+    btn.textContent = pending.size ? `${pending.size}曲を登録` : "曲をチェックして登録";
+    btn.disabled = !pending.size;
+  }
+  if (clear) clear.style.display = pending.size ? "" : "none";
+}
+function registerPending() {
+  if (!pending.size) { showToast("登録する曲にチェックを入れて"); return; }
+  pending.forEach(name => selected.add(name));
+  const n = pending.size;
+  pending.clear();
+  showToast(`${n}曲を登録した`);
+  renderAll();
+}
+function clearPending() {
+  pending.clear();
+  renderAll();
+}
+function unregisterSong(name) {
+  selected.delete(name);
+  pending.delete(name);
+  showToast("登録を解除した");
+  renderAll();
+}
+
+function renderResult() {
+  const sel = selectedSongs();
+  const learned = learnedSkills();
+  renderGlobalProgress();
+  renderPendingCount();
+  setText("countSongs", sel.length);
+  setText("maxLv", sel.length ? Math.max(...sel.map(s=>songDifficulty(s))) : "-");
+  setText("countSkills", learned.length);
+
+  const skills = document.getElementById("skills");
+  if (skills) skills.innerHTML = learned.length ? learned.map(s=>`<span class="chip good">${escapeHtml(s)}</span>`).join("") : `<span class="chip">まだ曲を選んでない</span>`;
+
+  renderLearnedSongs(sel);
+  renderGenreStats(sel);
+  renderRelations(sel);
+
+  const recs = document.getElementById("recommendations");
+  if (!recs) return;
+  if (!sel.length) {
+    const first = songs.find(s=>s["曲名"]==="Smoke On The Water") || songs[0];
+    recs.innerHTML = `<div class="rec ${routeClass(first?.["推奨ルート"])}"><div class="rec-top"><h3>${escapeHtml(first?.["曲名"] || "まずはSmoke On The Water")}</h3><span class="lv">難 Lv${escapeHtml(first ? songDifficulty(first) : 1)}</span></div><p>まずは弾ける曲を1曲チェック。迷ったらこの曲から登録して、診断の出方を見てください。</p>${first ? musicLinks(first) : ""}</div>`;
+    return;
+  }
+  const ranked = songs.map(s=>({...s, score: recommendationScore(s, learned, sel)}))
+    .filter(s=>s.score>-100)
+    .sort((a,b)=>b.score-a.score || songDifficulty(a)-songDifficulty(b))
+    .slice(0,3);
+  recs.innerHTML = ranked.map((s, idx)=>{
+    const url = getRefUrl(s);
+    const ref = url ? `<a class="ref-link" href="${escapeAttr(url)}" target="_blank" rel="noopener">参考動画を開く</a>` : `<span class="small">参考動画URL: 未登録</span>`;
+    return `<div class="rec ${routeClass(s["推奨ルート"])}">
+      <div class="rec-top"><h3>${idx === 0 ? "次は " : ""}${escapeHtml(s["曲名"])}</h3><span class="lv">難 Lv${escapeHtml(songDifficulty(s))}</span></div>
+      ${ratingGrid(s)}
+      <p><b>${escapeHtml(s["アーティスト"] || "アーティスト未設定")}</b></p>
+      <p><b>${escapeHtml(s["主スキル"] || "未設定")}</b> / ${routeBadge(s["推奨ルート"])}</p>
+      <p>${escapeHtml(s["一言説明"] || "")}</p>
+      <p class="small">壁: ${escapeHtml(s["壁"] || "未設定")} / 次候補: ${escapeHtml(s["次候補"] || "未設定")}</p>
+      ${musicLinks(s)}
+      ${ref}
+    </div>`;
+  }).join("");
+}
+function renderLearnedSongs(sel) {
+  const box = document.getElementById("learnedSongs");
+  if (!box) return;
+  if (!sel.length) { box.innerHTML = `<span class="chip">まだ曲を選んでない</span>`; return; }
+  box.innerHTML = sel.slice().sort((a,b)=>songDifficulty(a)-songDifficulty(b)).map(s=>`
+    <div class="learned-item ${routeClass(s["推奨ルート"])}">
+      <div><b>${escapeHtml(s["曲名"])}</b><div class="small">${escapeHtml(s["アーティスト"] || "")} / ${escapeHtml(s["主スキル"] || "")}</div></div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">${routeBadge(s["推奨ルート"])} <span class="lv">難 Lv${escapeHtml(songDifficulty(s))}</span>${miniRating(s)}<button class="learned-remove" data-remove="${escapeAttr(s["曲名"])}">解除</button></div>
+    </div>`).join("");
+  box.querySelectorAll("[data-remove]").forEach(btn => btn.onclick = () => unregisterSong(btn.dataset.remove));
+}
+function renderGenreStats(sel) {
+  const box = document.getElementById("genreStats");
+  if (!box) return;
+  const totalByRoute = {};
+  songs.forEach(s => { const r=s["推奨ルート"] || "未分類"; totalByRoute[r]=(totalByRoute[r]||0)+1; });
+  const learnedByRoute = {};
+  sel.forEach(s => { const r=s["推奨ルート"] || "未分類"; learnedByRoute[r]=(learnedByRoute[r]||0)+1; });
+  const rows = Object.keys(totalByRoute).sort().map(r=>({route:r, learned:learnedByRoute[r]||0, total:totalByRoute[r]}));
+  box.innerHTML = rows.map(row=>{
+    const pct = row.total ? Math.round(row.learned / row.total * 100) : 0;
+    return `<div class="mini-bar-row ${routeClass(row.route)}">
+      <div>${routeBadge(row.route)}</div>
+      <div class="mini-track"><div class="mini-fill" style="width:${pct}%"></div></div>
+      <div class="small">${row.learned}/${row.total}</div>
+    </div>`;
+  }).join("");
+}
+function renderRelations(sel) {
+  const box = document.getElementById("songRelations");
+  if (!box) return;
+  if (!sel.length) { box.innerHTML = `<span class="chip">曲を選ぶと、次候補へのつながりが出る</span>`; return; }
+  const selectedNames = new Set(sel.map(s=>s["曲名"]));
+  const edges = [];
+  sel.forEach(s => {
+    const next = (s["次候補"] || "").trim();
+    if (!next) return;
+    const target = songs.find(x=>x["曲名"]===next);
+    edges.push({from:s, to:target || {"曲名":next,"Lv":"?","推奨ルート":"未分類"}});
+  });
+  if (!edges.length) { box.innerHTML = `<span class="chip">選択曲には次候補が未設定</span>`; return; }
+  box.innerHTML = edges.map(e=>`
+    <div class="relation-item ${routeClass(e.from["推奨ルート"])}">
+      <b>${escapeHtml(e.from["曲名"])}</b> <span class="small">難Lv${escapeHtml(songDifficulty(e.from))} / ${escapeHtml(e.from["主スキル"] || "")}</span><br>
+      ↓<br>
+      <b>${escapeHtml(e.to["曲名"])}</b> <span class="small">難Lv${escapeHtml(e.to["Lv"] === "?" ? "?" : songDifficulty(e.to))} / ${escapeHtml(e.to["主スキル"] || "未登録")}</span>
+      ${selectedNames.has(e.to["曲名"]) ? `<span class="chip good">習得済み</span>` : ``}
+    </div>`).join("");
+}
+function courseDefinitions() {
+  const byName = Object.fromEntries(songs.map(s => [s["曲名"], s]));
+  const take = (names, fallback, limit = 14) => {
+    const picked = names.map(n => byName[n]).filter(Boolean);
+    const seen = new Set(picked.map(s => s["曲名"]));
+    fallback().forEach(s => { if (!seen.has(s["曲名"])) { picked.push(s); seen.add(s["曲名"]); } });
+    return picked.slice(0, limit);
+  };
+  return [
+    {
+      id:"mieyaRoute",
+      title:"ミーヤが通った上達コース",
+      badge:"実体験ベース",
+      desc:"作者本人のギター歴を、最初のパワーコードからカッティング、事変系、セッション/フュージョンまで一本道にしたコース。課題曲ツリーの元ネタ。",
+      songs: take([
+        "Deeper Deeper", "20th Century Boy", "Don't Say Lazy", "曇天", "American Idiot",
+        "小さな恋のうた", "Smells Like Teen Spirit", "完全感覚Dreamer", "God Knows...",
+        "Killing In The Name", "夜咄ディセイブ", "天ノ弱", "テレキャスター・ストライプ",
+        "群青日和", "閃光少女", "デリヘル呼んだら君がきた", "GO! GO! MANIAC",
+        "Catfish Blues", "Don't Stop Me Now", "If I Ain't Got You", "Just the Two of Us",
+        "透明人間", "OSCA", "電波通信", "白玉楼階段の幻闘", "Green-Tinted Sixties Mind",
+        "宝島", "Lunch Time", "Cosmic Sans"
+      ], () => songs.filter(s => ["邦ロック定番","アニソン/ボカロ","東京事変/オルタナ","R&B/フュージョン","カッティング/ファンク"].includes(s["推奨ルート"])).sort((a,b)=>songDifficulty(a)-songDifficulty(b)), 30)
+    },
+    {
+      id:"hougakuTeiban",
+      title:"邦ロック定番コース",
+      badge:"新人ライブ向け",
+      desc:"新人ライブで希望が多い邦ロック/J-popの母艦コース。知名度・バンド映え・練習価値を優先。",
+      songs: take(["明日も", "洗濯機と君とラヂオ", "HE IS MINE", "サイハテアイニ", "青い春", "花束", "高嶺の花子さん", "大不正解", "なんでもねだり", "ないものねだり", "Re:Re:", "転がる岩、君に朝が降る", "天体観測", "若者のすべて", "チェリボム", "Deeper Deeper", "完全感覚Dreamer", "イケナイ太陽", "MONSTER DANCE", "勝手にシンドバッド", "Mix Juiceのいうとおり", "場違いハミングバード", "テレキャスター・ストライプ", "innocent world", "あつまれ！パーティーピーポー", "透明水曜日", "ロマンス", "1999"], () => songs.filter(s => s["推奨ルート"] === "邦ロック定番").sort((a,b)=>songDifficulty(a)-songDifficulty(b)))
+    },
+    {
+      id:"beginner",
+      title:"初心者コース",
+      badge:"Lv1〜3",
+      desc:"まずはパワーコード、8ビート、単音リフ、ローコード。軽音で1曲通せる状態を作る入口。",
+      songs: take([
+        "Smoke On The Water", "Deeper Deeper", "曇天", "ふわふわ時間", "20th Century Boy", "American Idiot", "小さな恋のうた", "Day Tripper", "Back In Black", "Don't Say Lazy", "冬の日", "Bad Feeling"
+      ], () => songs.filter(s => songDifficulty(s) <= 3).sort((a,b)=>songDifficulty(a)-songDifficulty(b)))
+    },
+    {
+      id:"middle",
+      title:"中級コース",
+      badge:"Lv4〜6",
+      desc:"カッティング、オクターブ、アニソン/ボカロ系の速さ、コードワーク。上手く見える領域に入る。",
+      songs: take([
+        "完全感覚Dreamer", "God Knows...", "Only My Railgun", "Le Freak", "テレキャスターストライプ", "Can't Stop", "夜に駆ける", "カゲロウデイズ", "天ノ弱", "Killing In The Name", "群青日和", "透明人間"
+      ], () => songs.filter(s => songDifficulty(s) >= 4 && songDifficulty(s) <= 6).sort((a,b)=>songDifficulty(a)-songDifficulty(b)))
+    },
+    {
+      id:"advanced",
+      title:"上級コース",
+      badge:"Lv7〜",
+      desc:"ブルース、東京事変系、R&B/フュージョン、フュージョン、テクニカル曲。表現とアンサンブルまで見る。",
+      songs: take([
+        "Pride and Joy", "Little Wing", "デリヘル呼んだら君がきた", "修羅場", "If I Ain't Got You", "Just the Two of Us", "Isn't She Lovely", "宝島", "Cosmic Sans", "Lunch Time", "白玉楼階段の幻闘", "Green-Tinted Sixties Mind"
+      ], () => songs.filter(s => songDifficulty(s) >= 7).sort((a,b)=>songDifficulty(a)-songDifficulty(b)))
+    }
+  ];
+}
+function renderCourses() {
+  const box = document.getElementById("courseCards");
+  if (!box) return;
+  const defs = courseDefinitions();
+  box.innerHTML = defs.map(course => {
+    const learned = course.songs.filter(s => selected.has(s["曲名"]));
+    const pct = course.songs.length ? Math.round(learned.length / course.songs.length * 100) : 0;
+    const next = course.songs.find(s => !selected.has(s["曲名"]));
+    const list = course.songs.map((s, i) => {
+      const done = selected.has(s["曲名"]);
+      return `<div class="course-song ${routeClass(s["推奨ルート"])} ${done ? "done" : ""}">
+        <div class="index">${done ? "✓" : i + 1}</div>
+        <div>
+          <b>${escapeHtml(s["曲名"])}</b>
+          <div class="small">${escapeHtml(s["アーティスト"] || "")} / ${routeBadge(s["推奨ルート"])} / ${escapeHtml(s["主スキル"] || "")}</div>
+        </div>
+        <div>${miniRating(s)}</div>
+      </div>`;
+    }).join("");
+    return `<section class="course-card">
+      <div class="course-meta"><h2>${escapeHtml(course.title)}</h2><span class="chip good">${escapeHtml(course.badge)}</span></div>
+      <div class="course-desc">${escapeHtml(course.desc)}</div>
+      <div class="course-meta"><span class="small">進捗 ${learned.length}/${course.songs.length}</span><b>${pct}%</b></div>
+      <div class="course-progress"><span style="width:${pct}%"></span></div>
+      <div class="course-next"><b>次の目安：</b>${next ? `${escapeHtml(next["曲名"])}（難Lv${escapeHtml(songDifficulty(next))} / 練${escapeHtml(etudeRating(next))} / 定${escapeHtml(classicRating(next))} / ${escapeHtml(next["主スキル"] || "")}）` : "このコースは全曲登録済み"}</div>
+      <div class="course-stages">${list}</div>
+      <div class="course-actions"><button class="primary" data-course-jump="${course.id}">このコースの曲を探す</button></div>
+    </section>`;
+  }).join("");
+  box.querySelectorAll("[data-course-jump]").forEach(btn => {
+    btn.onclick = () => {
+      const course = courseDefinitions().find(c => c.id === btn.dataset.courseJump);
+      if (!course) return;
+      const first = course.songs.find(s => !selected.has(s["曲名"])) || course.songs[0];
+      currentRoute = "all";
+      const search = document.getElementById("search");
+      if (search && first) search.value = first["曲名"];
+      showAppTab("quest");
+      renderSongs();
+    };
+  });
+}
+
+function renderEditorFilters() {
+  const sel = document.getElementById("editRouteFilter");
+  if (!sel) return;
+  const now = sel.value || "all";
+  sel.innerHTML = '<option value="all">全ルート</option>' + allRouteOptions().map(r=>`<option value="${escapeAttr(r)}">${escapeHtml(r)}</option>`).join("");
+  sel.value = allRouteOptions().includes(now) ? now : "all";
+}
+function renderEditor() {
+  renderEditorFilters();
+  const q = (document.getElementById("editSearch")?.value || "").toLowerCase();
+  const rf = document.getElementById("editRouteFilter")?.value || "all";
+  const list = document.getElementById("editorList");
+  if (!list) return;
+  list.innerHTML = "";
+  songs.forEach((s, idx) => {
+    const hay = [s["曲名"],s["アーティスト"],s["推奨ルート"],s["主スキル"],s["習得スキル"],s["壁"]].join(" ").toLowerCase();
+    if ((rf !== "all" && s["推奨ルート"] !== rf) || (q && !hay.includes(q))) return;
+    const div = document.createElement("div");
+    div.className = "edit-card";
+    div.innerHTML = `
+      <div class="edit-head">
+        <b>#${idx+1} ${escapeHtml(s["曲名"] || "曲名未設定")}</b>
+        <div class="edit-actions">
+          <button data-act="up">上へ</button><button data-act="down">下へ</button><button data-act="dup">複製</button><button data-act="del" class="danger">削除</button>
+        </div>
+      </div>
+      <div class="editor-grid">
+        ${field(idx,"曲名","曲名","span-4")}
+        ${field(idx,"アーティスト","アーティスト","span-4")}
+        ${field(idx,"演奏難易度","演奏難易度","span-2","number")}
+        ${field(idx,"エチュード適性","エチュード適性","span-2","number")}
+        ${field(idx,"ジャンル定番度","ジャンル定番度","span-2","number")}
+        ${field(idx,"推奨ルート","推奨ルート","span-2")}
+        ${field(idx,"主スキル","主スキル","span-3")}
+        ${field(idx,"必須スキル","必須スキル","span-3")}
+        ${field(idx,"習得スキル","習得スキル","span-3")}
+        ${field(idx,"壁","壁","span-3")}
+        ${field(idx,"次候補","次候補","span-4")}
+        ${field(idx,"参考動画URL","参考動画URL","span-8","url")}
+        ${field(idx,"一言説明","一言説明","span-12","textarea")}
+        ${field(idx,"練習ポイント","練習ポイント","span-12","textarea")}
+      </div>`;
+    div.querySelectorAll("[data-field]").forEach(el => {
+      const update = () => {
+        const key = el.dataset.field;
+        songs[idx][key] = key === "演奏難易度" ? Math.max(1, Math.min(10, Number(el.value)||1)) : (["エチュード適性","ジャンル定番度"].includes(key) ? Math.max(1, Math.min(5, Number(el.value)||3)) : el.value);
+        if (key === "演奏難易度") songs[idx]["Lv"] = songs[idx]["演奏難易度"];
+        autoSave();
+      };
+      el.addEventListener("input", update);
+      el.addEventListener("change", update);
+    });
+    div.querySelector('[data-act="up"]').onclick = () => { if(idx>0) { [songs[idx-1],songs[idx]]=[songs[idx],songs[idx-1]]; persist(); renderAll(); } };
+    div.querySelector('[data-act="down"]').onclick = () => { if(idx<songs.length-1) { [songs[idx+1],songs[idx]]=[songs[idx],songs[idx+1]]; persist(); renderAll(); } };
+    div.querySelector('[data-act="dup"]').onclick = () => { const copy = structuredClone(s); copy["曲名"] = (copy["曲名"]||"新規曲") + " コピー"; songs.splice(idx+1,0,copy); persist(); renderAll(); };
+    div.querySelector('[data-act="del"]').onclick = () => { if(confirm(`「${s["曲名"]}」を削除する？`)) { selected.delete(s["曲名"]); pending.delete(s["曲名"]); songs.splice(idx,1); persist(); renderAll(); } };
+    list.appendChild(div);
+  });
+}
+function field(idx,key,label,cls,type="text") {
+  const val = songs[idx][key] ?? "";
+  if (key === "推奨ルート") {
+    const opts = allRouteOptions().map(r => `<option value="${escapeAttr(r)}" ${r===val?"selected":""}>${escapeHtml(r)}</option>`).join("");
+    return `<div class="field ${cls}"><label>${label}</label><select data-field="${key}">${opts}</select></div>`;
+  }
+  if (type === "textarea") return `<div class="field ${cls}"><label>${label}</label><textarea rows="2" data-field="${key}">${escapeHtml(val)}</textarea></div>`;
+  return `<div class="field ${cls}"><label>${label}</label><input type="${type}" data-field="${key}" value="${escapeAttr(val)}" ${key==="演奏難易度"?'min="1" max="10"':(["エチュード適性","ジャンル定番度"].includes(key)?'min="1" max="5"':'')}></div>`;
+}
+function addSong() {
+  songs.push(validateSong({No:songs.length+1,曲名:"新規曲",演奏難易度:1,Lv:1,エチュード適性:3,ジャンル定番度:1,主スキル:"",推奨ルート:"未分類",一言説明:"",練習ポイント:"",壁:"",次候補:"",習得スキル:"",必須スキル:"",アーティスト:"",参考動画URL:""}));
+  persist(); renderAll();
+}
+function download(filename, content, type="text/plain") {
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function downloadJson() { download("guitar_quest_edited_data.json", JSON.stringify(songs,null,2), "application/json"); }
+function csvCell(v) { return '"' + String(v ?? "").replaceAll('"','""').replaceAll('\n',' ') + '"'; }
+function downloadCsv() {
+  const headers = ["No","曲名","アーティスト","演奏難易度","エチュード適性","ジャンル定番度","推奨ルート","主スキル","必須スキル","習得スキル","壁","次候補","一言説明","練習ポイント","参考動画URL"];
+  const csv = headers.join(",") + "\n" + songs.map(s=>headers.map(h=>csvCell(s[h])).join(",")).join("\n");
+  download("guitar_quest_songs.csv", "﻿"+csv, "text/csv;charset=utf-8");
+}
+function downloadFinalHtml() {
+  persist();
+  let doc = "<!doctype html>\n" + document.documentElement.outerHTML;
+  const data = JSON.stringify(songs, null, 0).replace(/<\/script>/gi, "<\\/script>");
+  doc = doc.replace(/<script id="initialData" type="application\/json">[\s\S]*?<\/script>/, '<script id="initialData" type="application/json">' + data + '</scr' + 'ipt>');
+  doc = doc.replace("const FORCE_EMBEDDED = false;", "const FORCE_EMBEDDED = false;");
+  doc = doc.replace("<title>課題曲ツリー β 3軸評価版</title>", "<title>課題曲ツリー β 完成版</title>");
+  download("guitar_quest_final.html", doc, "text/html;charset=utf-8");
+}
+function resetData() {
+  if (!confirm("このブラウザに保存した編集データを破棄して、埋め込み初期データに戻す？")) return;
+  localStorage.removeItem(DATA_KEY);
+  songs = structuredClone(baseSongs);
+  selected.clear();
+  pending.clear();
+  showToast("初期データに戻した");
+  renderAll();
+}
+function setText(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+function escapeHtml(v) { return String(v ?? "").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function escapeAttr(v) { return String(v ?? "").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function renderAll() { renderRoutes(); renderSkillChips(); renderSongs(); renderResult(); renderCourses(); renderDatabaseInfo(); }
+
+
+function validateSong(raw, idx) {
+  const s = { ...raw };
+  s.No = idx + 1;
+  s["曲名"] = String(s["曲名"] || s["title"] || s["song"] || "").trim() || `未設定曲${idx+1}`;
+  s["アーティスト"] = String(s["アーティスト"] || s["artist"] || "").trim() || "要確認";
+  s["演奏難易度"] = Math.max(1, Math.min(10, Number(s["演奏難易度"] || s["Lv"] || s["level"] || 1) || 1));
+  s["Lv"] = s["演奏難易度"];
+  s["エチュード適性"] = Math.max(1, Math.min(5, Number(s["エチュード適性"] || s["etudeRating"] || s["etude"] || 3) || 3));
+  s["ジャンル定番度"] = Math.max(1, Math.min(5, Number(s["ジャンル定番度"] || s["classicRating"] || s["standardRating"] || 3) || 3));
+  s["推奨ルート"] = String(s["推奨ルート"] || s["route"] || s["ジャンル"] || "未分類").trim() || "未分類";
+  s["主スキル"] = String(s["主スキル"] || s["mainSkill"] || "").trim();
+  s["必須スキル"] = String(s["必須スキル"] || s["requiredSkills"] || "").trim();
+  s["習得スキル"] = String(s["習得スキル"] || s["learnedSkills"] || "").trim();
+  s["壁"] = String(s["壁"] || s["wall"] || "").trim();
+  s["次候補"] = String(s["次候補"] || s["next"] || "").trim();
+  s["一言説明"] = String(s["一言説明"] || s["description"] || "").trim();
+  s["練習ポイント"] = String(s["練習ポイント"] || s["practice"] || "").trim();
+  s["参考動画URL"] = String(s["参考動画URL"] || s["referenceUrl"] || s["url"] || "").trim();
+  return s;
+}
+function parseCsv(text) {
+  const rows = [];
+  let row = [], cell = "", quote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], next = text[i+1];
+    if (quote) {
+      if (ch === '"' && next === '"') { cell += '"'; i++; }
+      else if (ch === '"') quote = false;
+      else cell += ch;
+    } else {
+      if (ch === '"') quote = true;
+      else if (ch === ',') { row.push(cell); cell = ""; }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ""; }
+      else if (ch !== '\r') cell += ch;
+    }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  if (!rows.length) return [];
+  const headers = rows.shift().map(h => h.replace(/^\ufeff/, "").trim());
+  return rows.filter(r => r.some(c => String(c).trim())).map(r => Object.fromEntries(headers.map((h,i)=>[h, r[i] ?? ""])));
+}
+function applyDatabase(newSongs) {
+  songs = newSongs.map(validateSong);
+  selected = new Set([...selected].filter(name => songs.some(s => s["曲名"] === name)));
+  pending.clear();
+  persist();
+  currentRoute = "all";
+  renderAll();
+  showToast(`DBを読み込んだ：${songs.length}曲`);
+}
+async function importDatabaseFile() {
+  const input = document.getElementById("dbFileInput");
+  const file = input?.files?.[0];
+  if (!file) { alert("JSONかCSVファイルを選んでください"); return; }
+  const text = await file.text();
+  try {
+    let data;
+    if (file.name.toLowerCase().endsWith(".csv")) data = parseCsv(text);
+    else data = JSON.parse(text);
+    if (data && !Array.isArray(data) && Array.isArray(data.songs)) data = data.songs;
+    if (!Array.isArray(data)) throw new Error("配列形式ではありません");
+    applyDatabase(data);
+    input.value = "";
+  } catch (e) {
+    console.error(e);
+    alert("読み込みに失敗しました。JSON/CSVの形式を確認してください。\n" + e.message);
+  }
+}
+function renderDatabaseInfo() {
+  setText("dbSongCount", songs.length);
+  setText("dbRouteCount", routes().length);
+  setText("dbMaxLv", songs.length ? Math.max(...songs.map(s => songDifficulty(s))) : "-");
+  const box = document.getElementById("dbRouteStats");
+  if (!box) return;
+  const total = Math.max(1, songs.length);
+  box.innerHTML = routes().map(r => {
+    const count = songs.filter(s => s["推奨ルート"] === r).length;
+    const pct = Math.round(count / total * 100);
+    return `<div class="mini-bar ${routeClass(r)}"><div><b>${escapeHtml(r)}</b><span>${count}曲</span></div><div class="mini-track"><span style="width:${pct}%"></span></div></div>`;
+  }).join("");
+}
+function downloadDatabaseJson() {
+  download("guitar_quest_database.json", JSON.stringify(songs.map(validateSong), null, 2), "application/json");
+}
+function downloadDatabaseCsv() {
+  const headers = ["No","曲名","アーティスト","演奏難易度","エチュード適性","ジャンル定番度","推奨ルート","主スキル","必須スキル","習得スキル","壁","次候補","一言説明","練習ポイント","参考動画URL"];
+  const csv = headers.join(",") + "\n" + songs.map(s => headers.map(h => csvCell(s[h])).join(",")).join("\n");
+  download("guitar_quest_database.csv", "\ufeff" + csv, "text/csv;charset=utf-8");
+}
+function resetDatabaseToDefault() {
+  if (!confirm("読み込んだDBを消して、初期データに戻す？")) return;
+  localStorage.removeItem(DATA_KEY);
+  songs = structuredClone(baseSongs).map(validateSong);
+  selected.clear();
+  pending.clear();
+  currentRoute = "all";
+  renderAll();
+  showToast("初期DBに戻した");
+}
+
+const registerBtn = document.getElementById("registerBtn");
+const clearPendingBtn = document.getElementById("clearPendingBtn");
+const searchInput = document.getElementById("search");
+if (registerBtn) registerBtn.onclick = registerPending;
+if (clearPendingBtn) clearPendingBtn.onclick = clearPending;
+if (searchInput) searchInput.addEventListener("input", renderSongs);
+const importDbBtn = document.getElementById("importDbBtn");
+const downloadDbJsonBtn = document.getElementById("downloadDbJsonBtn");
+const downloadDbCsvBtn = document.getElementById("downloadDbCsvBtn");
+const resetDbBtn = document.getElementById("resetDbBtn");
+if (importDbBtn) importDbBtn.onclick = importDatabaseFile;
+if (downloadDbJsonBtn) downloadDbJsonBtn.onclick = downloadDatabaseJson;
+if (downloadDbCsvBtn) downloadDbCsvBtn.onclick = downloadDatabaseCsv;
+if (resetDbBtn) resetDbBtn.onclick = resetDatabaseToDefault;
+
+function showAppTab(which) {
+  const q = document.getElementById("questView");
+  const c = document.getElementById("courseView");
+  const d = document.getElementById("databaseView");
+  const h = document.getElementById("historyView");
+  const tq = document.getElementById("tabQuest");
+  const tc = document.getElementById("tabCourses");
+  const td = document.getElementById("tabDatabase");
+  const th = document.getElementById("tabHistory");
+  if (!q || !c || !d || !h || !tq || !tc || !td || !th) return;
+  q.classList.toggle("hidden", which !== "quest");
+  c.classList.toggle("hidden", which !== "courses");
+  d.classList.toggle("hidden", which !== "database");
+  h.classList.toggle("hidden", which !== "history");
+  tq.classList.toggle("active", which === "quest");
+  tc.classList.toggle("active", which === "courses");
+  td.classList.toggle("active", which === "database");
+  th.classList.toggle("active", which === "history");
+  if (which === "courses") renderCourses();
+  if (which === "database") renderDatabaseInfo();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+const DEV_CODE = "MYJM4022";
+const DEV_UNLOCK_KEY = "guitarQuestDeveloperUnlocked.v1";
+function openDeveloperDatabase() {
+  const already = sessionStorage.getItem(DEV_UNLOCK_KEY) === "1";
+  if (!already) {
+    const code = prompt("開発者コードを入力してください");
+    if (code === null) return;
+    if (String(code).trim() !== DEV_CODE) {
+      showToast("開発者コードが違います");
+      return;
+    }
+    sessionStorage.setItem(DEV_UNLOCK_KEY, "1");
+    showToast("データ読み込みを開きました");
+  }
+  showAppTab("database");
+}
+
+function setupAppTabs() {
+  const tq = document.getElementById("tabQuest");
+  const tc = document.getElementById("tabCourses");
+  const td = document.getElementById("tabDatabase");
+  const th = document.getElementById("tabHistory");
+  if (tq) tq.onclick = () => showAppTab("quest");
+  if (tc) tc.onclick = () => showAppTab("courses");
+  if (td) td.onclick = () => showAppTab("database");
+  if (th) th.onclick = () => showAppTab("history");
+}
+setupAppTabs();
+const developerDbBtn = document.getElementById("developerDbBtn");
+if (developerDbBtn) developerDbBtn.onclick = openDeveloperDatabase;
+renderAll();
+</script>
+</body>
+</html>
